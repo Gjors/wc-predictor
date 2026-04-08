@@ -51,7 +51,6 @@ const fmtMV = (v) => {
 // ─── Form data (last 5 results) ────────────────────────────────────
 // Format: "R score vs Opponent" where R = S(ieg)/U(nentschieden)/N(iederlage)
 const FORM = {
-{
   "Mexiko": ["U 1:1 vs Belgien", "U 0:0 vs Portugal", "S 4:0 vs Island", "S 1:0 vs Bolivia", "S 1:0 vs Panama"],
   "Südafrika": ["N 1:2 vs Panama", "U 1:1 vs Panama", "N 1:2 vs Kamerun", "S 3:2 vs Simbabwe", "N 0:1 vs Ägypten"],
   "Republik Korea": ["N 0:1 vs Österreich", "N 0:4 vs Elfenbeinküste", "S 1:0 vs Ghana", "S 2:0 vs Bolivia", "S 2:0 vs Paraguay"],
@@ -100,7 +99,6 @@ const FORM = {
   "Kroatien": ["N 1:3 vs Brasilien", "S 2:1 vs Kolumbien", "S 3:2 vs Montenegro", "S 3:1 vs Färöer", "S 3:0 vs Gibraltar"],
   "Ghana": ["N 1:2 vs Deutschland", "N 1:5 vs Österreich", "N 0:1 vs Südkorea", "N 0:2 vs Japan", "S 1:0 vs Komoren"],
   "Panama": ["S 2:1 vs Südafrika", "U 1:1 vs Südafrika", "N 0:1 vs Mexiko", "U 1:1 vs Bolivia", "S 3:0 vs El Salvador"]
-}
 };
 
 // ─── Win probability from market values ─────────────────────────────
