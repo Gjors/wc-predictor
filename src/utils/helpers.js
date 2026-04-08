@@ -86,6 +86,9 @@ export function clearDown(mid, winners) {
   });
 }
 
+
+export const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
 // ─── Simulation helpers ─────────────────────────────────────────────
 
 /** Weighted random shuffle: pick items one by one with probability proportional to weightFn */
