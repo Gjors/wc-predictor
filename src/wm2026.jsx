@@ -227,6 +227,7 @@ function GroupTable({gid,teams,onReorder}){
   const onEnd=()=>{if(drag.current===null||over.current===null||drag.current===over.current)return;
     const t=[...teams],d=t.splice(drag.current,1)[0];t.splice(over.current,0,d);
     onReorder(gid,t);drag.current=null;over.current=null;};
+  const moveTeam=(from,to)=>{const t=[...teams],d=t.splice(from,1)[0];t.splice(to,0,d);onReorder(gid,t);};
 
   // Sum of group market values for bar width reference
   const maxMV = Math.max(...teams.map(t=>MV[t]||0));
@@ -246,17 +247,23 @@ function GroupTable({gid,teams,onReorder}){
               onDragEnd={onEnd} onDragOver={e=>e.preventDefault()}
               className={`flex items-center px-2 py-1.5 text-xs cursor-grab active:cursor-grabbing select-none hover:bg-blue-50 transition-colors ${i<3?"border-b":""}`}
               style={{borderColor:"#e8ecf0",background:i%2===0?"#fff":"#f7f9fb"}}>
-              <span className="text-slate-300 mr-1" style={{fontSize:10}}>⠿</span>
+              {/* Mobile: up/down buttons */}
+              <div className="flex flex-col sm:hidden mr-1 flex-shrink-0" style={{fontSize:10,lineHeight:1}}>
+                <button onClick={(e)=>{e.stopPropagation();if(i>0)moveTeam(i,i-1)}} className={`${i>0?"text-slate-400":"text-transparent"} leading-none`}>▲</button>
+                <button onClick={(e)=>{e.stopPropagation();if(i<3)moveTeam(i,i+1)}} className={`${i<3?"text-slate-400":"text-transparent"} leading-none`}>▼</button>
+              </div>
+              {/* Desktop: drag handle */}
+              <span className="text-slate-300 mr-1 hidden sm:inline" style={{fontSize:10}}>⠿</span>
               <span className={`inline-flex items-center justify-center w-5 h-4 rounded font-bold mr-1.5 flex-shrink-0 ${RC[i]}`} style={{fontSize:10}}>{i+1}</span>
               <span className="mr-1 text-sm leading-none">{FL[team]||"🏳️"}</span>
               <span className="font-medium text-slate-800 truncate" style={{minWidth:0,maxWidth:90}}>{sn(team)}</span>
 
               {/* Form curve */}
-              <div className="flex items-center gap-0.5 mx-2 flex-shrink-0">
+              <div className="flex items-center gap-0.5 mx-1.5 sm:mx-2 flex-shrink-0">
                 {form.map((f,fi)=>{
                   const r=f[0], detail=f.slice(2);
                   return(
-                    <span key={fi} className="relative group/dot">
+                    <span key={fi} className="relative group/dot" title={detail}>
                       <span className={`inline-block w-2.5 h-2.5 rounded-full ${FC[r]||"bg-gray-300"} ring-1 ring-white`}/>
                       <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 px-2 py-1 rounded shadow-lg bg-slate-800 text-white whitespace-nowrap hidden group-hover/dot:block z-50 pointer-events-none"
                         style={{fontSize:10}}>
@@ -269,7 +276,7 @@ function GroupTable({gid,teams,onReorder}){
 
               {/* Market value with mini bar */}
               <div className="ml-auto flex items-center gap-1.5 flex-shrink-0">
-                <div className="w-12 h-1.5 rounded-full bg-gray-200 overflow-hidden" title={`${fmtMV(mv)} €`}>
+                <div className="hidden sm:block w-12 h-1.5 rounded-full bg-gray-200 overflow-hidden" title={`${fmtMV(mv)} €`}>
                   <div className="h-full rounded-full" style={{width:`${maxMV?(mv/maxMV*100):0}%`,background:mv>=500?"#16a34a":mv>=200?"#2563eb":mv>=100?"#d97706":"#94a3b8"}}/>
                 </div>
                 <span className="font-mono text-slate-500 text-right" style={{fontSize:9,minWidth:52}}>{fmtMV(mv)} €</span>
@@ -294,7 +301,7 @@ function ThirdSel({groups,sel,onToggle}){
         <span className={`font-mono px-1.5 py-0.5 rounded ${n===8?"bg-emerald-500":"bg-amber-500"}`} style={{fontSize:10}}>{n}/8</span>
       </div>
       <div className="border border-t-0 rounded-b p-1.5" style={{borderColor:"#d1d9e0"}}>
-        <div className="grid grid-cols-6 gap-1">
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-1">
           {GIDS.map(g=>{const team=groups[g]?.[2];if(!team)return null;
             const on=sel.includes(g),dis=full&&!on;
             return(<button key={g} onClick={()=>!dis&&onToggle(g)} disabled={dis}
@@ -444,7 +451,7 @@ function Champ({groups,ta,winners}){
   const champ=ws?getTeam(104,ws,groups,ta,winners):null;
   if(!champ)return null;
   return(
-    <div className="flex items-center justify-center gap-3 py-2.5 px-6 mb-4 rounded-lg animate-pulse"
+    <div className="flex items-center justify-center gap-3 py-2.5 px-3 sm:px-6 mb-4 rounded-lg animate-pulse"
       style={{background:"linear-gradient(135deg,#1a2d4a,#2a4a6b)",border:"2px solid #c9a84c"}}>
       <span className="text-3xl">{FL[champ]||"🏆"}</span>
       <div className="text-center">
@@ -566,7 +573,7 @@ export default function App(){
 
   const tabBtn=(id,label)=>(
     <button onClick={()=>setTab(id)}
-      className={`px-5 py-2 text-xs font-bold uppercase tracking-wider transition-colors
+      className={`px-3 sm:px-5 py-2 text-xs font-bold uppercase tracking-wider transition-colors
         ${tab===id?"text-[#1a2d4a] bg-[#eef1f5] rounded-t":"text-blue-300 hover:text-white"}`}
       style={{fontFamily:"'Barlow Condensed',sans-serif",borderBottom:tab===id?"none":"2px solid transparent"}}>
       {label}
@@ -585,9 +592,12 @@ export default function App(){
             <h1 className="text-white font-bold text-base leading-tight" style={{fontFamily:"'Barlow Condensed',sans-serif",letterSpacing:"0.5px"}}>
               FIFA WM 2026 — TURNIERBAUM-PREDICTOR
             </h1>
-            <p className="text-blue-200" style={{fontSize:10}}>USA · Mexiko · Kanada &nbsp;|&nbsp; 11. Juni – 19. Juli 2026</p>
+            <p className="text-blue-200" style={{fontSize:10}}>
+            <span className="hidden sm:inline">USA · Mexiko · Kanada &nbsp;|&nbsp; 11. Juni – 19. Juli 2026</span>
+            <span className="sm:hidden text-amber-300 font-bold">{totalPicks}/31 Tipps</span>
+          </p>
           </div>
-          <div className="ml-auto flex items-center gap-3 text-blue-300" style={{fontSize:10}}>
+          <div className="ml-auto hidden md:flex items-center gap-3 text-blue-300" style={{fontSize:10}}>
             <span>48 Teams</span><span>·</span><span>12 Gruppen</span><span>·</span>
             <span className="text-amber-300 font-bold">{totalPicks}/31 Tipps</span>
           </div>
@@ -607,7 +617,7 @@ export default function App(){
               style={{color:"#1a2d4a",borderBottom:"2px solid #1a2d4a",fontFamily:"'Barlow Condensed',sans-serif"}}>
               Gruppenphase — Drag & Drop zum Sortieren
             </h2>
-            <div className="grid grid-cols-4 gap-3 mb-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
               {GIDS.map(g=><GroupTable key={g} gid={g} teams={groups[g]} onReorder={handleReorder}/>)}
             </div>
             <ThirdSel groups={groups} sel={selThirds} onToggle={handleToggle}/>
@@ -618,11 +628,12 @@ export default function App(){
             </div>
           </div>
         ):(
-          <div className="p-4">
+          <div className="p-2 sm:p-4 overflow-x-auto">
             <h2 className="font-bold text-xs uppercase tracking-wider mb-2 pb-1"
               style={{color:"#1a2d4a",borderBottom:"2px solid #1a2d4a",fontFamily:"'Barlow Condensed',sans-serif"}}>
               K.o.-Runde — Auf ein Team klicken = Sieger auswahlen
             </h2>
+            <p className="text-xs text-slate-400 mb-2 sm:hidden">← Wische zum Scrollen →</p>
             <FullBracket groups={groups} ta={ta} winners={winners} onPick={handlePick}/>
           </div>
         )}
