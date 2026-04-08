@@ -1,24 +1,23 @@
 import { useState } from "react";
-import { FL, GIDS } from "../data/constants";
+import { FL, GIDS, UI_DICT } from "../data/constants";
 import { sn } from "../utils/helpers";
 
-export default function ThirdSel({ groups, sel, onToggle, onAutoFill, onClear, language, uiDict }) {
+export default function ThirdSel({ groups, sel, onToggle, onAutoFill, onClear, lang = "de" }) {
   const [showInfo, setShowInfo] = useState(false);
   const n = sel.length;
   const full = n >= 8;
-  const autoLabel = uiDict?.[language]?.autoFill || "Auto";
-  const clearLabel = uiDict?.[language]?.clear || "Reset";
+  const t = UI_DICT[lang];
 
   return (
     <div className="mb-3">
       <div className="flex items-center justify-between px-2.5 py-1 rounded-t" style={{ background: "#1a2d4a", color: "#fff" }}>
         <div className="flex items-center gap-1.5">
-          <span className="font-bold text-xs tracking-wide" style={{ fontFamily: "'Barlow Condensed',sans-serif" }}>BESTE DRITTPLATZIERTE</span>
+          <span className="font-bold text-xs tracking-wide" style={{ fontFamily: "'Barlow Condensed',sans-serif" }}>{t.bestThirds}</span>
           <button
             type="button"
             onClick={() => setShowInfo((v) => !v)}
             className="w-4 h-4 rounded-full border border-white/60 text-[10px] font-semibold leading-none flex items-center justify-center hover:bg-white/10"
-            aria-label="Informationen zur Drittplatzierten-Logik anzeigen"
+            aria-label={t.thirdsInfoLabel}
             aria-expanded={showInfo}
           >
             ?
@@ -31,21 +30,21 @@ export default function ThirdSel({ groups, sel, onToggle, onAutoFill, onClear, l
             onClick={onAutoFill}
             className="text-[10px] px-1.5 py-0.5 rounded bg-white/10 hover:bg-white/20"
           >
-            {autoLabel}
+            {t.autoFill}
           </button>
           <button
             type="button"
             onClick={onClear}
             className="text-[10px] px-1.5 py-0.5 rounded bg-white/10 hover:bg-white/20"
           >
-            {clearLabel}
+            {t.clear}
           </button>
         </div>
       </div>
       <div className="border border-t-0 rounded-b p-1.5" style={{ borderColor: "#d1d9e0" }}>
         {showInfo && (
           <div className="mb-1.5 rounded bg-blue-50 text-blue-800 px-2 py-1.5 text-[11px] leading-snug">
-            In der Realität qualifizieren sich die 8 besten Dritten über Punkte und Tordifferenz. Hier übernimmst du diese Auswahl. Die Platzierung im K.o.-Baum ist danach nicht zufällig, sondern folgt strikt der offiziellen FIFA-Matrix: Teams werden anhand ihres Gruppen-Buchstabens so verteilt, dass im Sechzehntelfinale nie zwei Teams aus derselben Vorrundengruppe aufeinandertreffen.
+            {t.thirdsInfo}
           </div>
         )}
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-1">
@@ -65,13 +64,13 @@ export default function ThirdSel({ groups, sel, onToggle, onAutoFill, onClear, l
               >
                 <span className={`w-3.5 h-3.5 rounded border flex items-center justify-center flex-shrink-0
                 ${on ? "bg-emerald-500 border-emerald-500 text-white" : "border-gray-300"}`} style={{ fontSize: 8 }}>{on ? "✓" : ""}</span>
-                <span>{FL[team] || ""}</span><span className="truncate">{sn(team)}</span>
+                <span>{FL[team] || ""}</span><span className="truncate">{sn(team, lang)}</span>
                 <span className="text-gray-400 ml-auto">({g})</span>
               </button>
             );
           })}
         </div>
-        {n < 8 && <p className="text-amber-600 mt-1.5 text-center" style={{ fontSize: 10 }}>Noch {8 - n} wählen</p>}
+        {n < 8 && <p className="text-amber-600 mt-1.5 text-center" style={{ fontSize: 10 }}>{t.thirdsRemaining.replace("{n}", 8 - n)}</p>}
       </div>
     </div>
   );

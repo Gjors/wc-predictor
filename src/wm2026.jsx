@@ -2,16 +2,9 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import GroupTable from "./components/GroupTable";
 import ThirdSel from "./components/ThirdSel";
 import { FullBracket } from "./components/Bracket";
-import { FIN, QF, R16, R32, SF } from "./data/bracket";
-import { GIDS, INIT_GROUPS, MV } from "./data/constants";
-import {
-  clearDown,
-  delay,
-  getTeam,
-  pickWinnerByMV,
-  solveThirds,
-  weightedShuffle,
-} from "./utils/helpers";
+import { GIDS, INIT_GROUPS, MV, UI_DICT } from "./data/constants";
+import { R32, R16, QF, SF, FIN } from "./data/bracket";
+import { clearDown, delay, solveThirds, getTeam, weightedShuffle, pickWinnerByMV } from "./utils/helpers";
 
 const decodeState = (raw) => {
   if (!raw) return null;
@@ -45,6 +38,8 @@ export default function App() {
   const [selThirds, setSelThirds] = useState(_restored?.selThirds || []);
   const [winners, setWinners] = useState(_restored?.winners || {});
   const [tab, setTab] = useState("groups");
+  const [lang, setLang] = useState("de");
+  const t = UI_DICT[lang];
 
   const ta = useMemo(() => solveThirds(selThirds), [selThirds]);
 
@@ -220,47 +215,55 @@ export default function App() {
           <span className="text-xl mr-2">⚽</span>
           <div>
             <h1 className="text-white font-bold text-base leading-tight" style={{ fontFamily: "'Barlow Condensed',sans-serif", letterSpacing: "0.5px" }}>
-              FIFA WM 2026 — TURNIERBAUM-PREDICTOR
+              {t.title}
             </h1>
             <p className="text-blue-200" style={{ fontSize: 10 }}>
-              <span className="hidden sm:inline">USA · Mexiko · Kanada &nbsp;|&nbsp; 11. Juni – 19. Juli 2026</span>
-              <span className="sm:hidden text-amber-300 font-bold">{totalPicks}/31 Tipps</span>
+              <span className="hidden sm:inline">{t.subtitle} &nbsp;|&nbsp; {t.dates}</span>
+              <span className="sm:hidden text-amber-300 font-bold">{totalPicks}/31 {t.picks}</span>
             </p>
             {countdown ? (
               <p className="text-blue-300 font-bold" style={{ fontSize: 10, fontFamily: "'Barlow Condensed',sans-serif" }}>
-                Noch {countdown.days} Tage, {countdown.hours} Std., {countdown.minutes} Min.
+                {t.countdownPre}{t.countdownPre ? " " : ""}{countdown.days} {t.countdownDays}, {countdown.hours} {t.countdownHours}, {countdown.minutes} {t.countdownMin}.
               </p>
             ) : (
               <p className="text-emerald-400 font-bold" style={{ fontSize: 10, fontFamily: "'Barlow Condensed',sans-serif" }}>
-                Das Turnier lauft!
+                {t.tournamentLive}
               </p>
             )}
           </div>
           <div className="ml-auto flex items-center gap-2 sm:gap-3">
             <div className="hidden md:flex items-center gap-3 text-blue-300" style={{ fontSize: 10 }}>
-              <span>48 Teams</span><span>·</span><span>12 Gruppen</span><span>·</span>
-              <span className="text-amber-300 font-bold">{totalPicks}/31 Tipps</span>
+              <span>{t.teams}</span><span>·</span><span>{t.groups}</span><span>·</span>
+              <span className="text-amber-300 font-bold">{totalPicks}/31 {t.picks}</span>
             </div>
             <button
               onClick={handleShare}
               className="relative px-2.5 py-1 rounded text-xs font-bold text-white transition-colors"
               style={{ background: "#2563eb", fontFamily: "'Barlow Condensed',sans-serif", fontSize: 11 }}
             >
-              {copied ? "Kopiert!" : "Link teilen"}
+              {copied ? t.copied : t.share}
               {copied && (
                 <span
                   className="absolute -bottom-7 left-1/2 -translate-x-1/2 px-2 py-0.5 rounded text-white whitespace-nowrap z-50"
                   style={{ background: "#059669", fontSize: 10 }}
                 >
-                  In Zwischenablage kopiert
+                  {t.copiedTooltip}
                 </span>
               )}
+            </button>
+            {/* Language toggle */}
+            <button
+              onClick={() => setLang((l) => (l === "de" ? "en" : "de"))}
+              className="px-2 py-1 rounded text-xs font-bold text-white transition-colors"
+              style={{ background: "#334155", fontFamily: "'Barlow Condensed',sans-serif", fontSize: 11 }}
+            >
+              {lang === "de" ? "🇬🇧 EN" : "🇩🇪 DE"}
             </button>
           </div>
         </div>
         <div className="flex px-5 gap-1" style={{ borderTop: "1px solid rgba(255,255,255,0.08)", background: "#15253d" }}>
-          {tabBtn("groups", "Gruppen & Analysen")}
-          {tabBtn("bracket", "Turnierbaum")}
+          {tabBtn("groups", t.tabGroups)}
+          {tabBtn("bracket", t.tabBracket)}
         </div>
       </header>
 
@@ -271,7 +274,7 @@ export default function App() {
               className="font-bold text-xs uppercase tracking-wider mb-3 pb-1"
               style={{ color: "#1a2d4a", borderBottom: "2px solid #1a2d4a", fontFamily: "'Barlow Condensed',sans-serif" }}
             >
-              Gruppenphase — <span className="hidden sm:inline">Drag & Drop</span><span className="sm:hidden">Long-Press</span> zum Sortieren
+              {t.groupHeading} — <span className="hidden sm:inline">{t.sortDragDrop}</span><span className="sm:hidden">{t.sortLongPress}</span> {t.sortSuffix}
             </h2>
             <div className="flex flex-wrap gap-2 mb-3">
               <button
@@ -280,7 +283,7 @@ export default function App() {
                 className="px-3 py-1.5 rounded text-xs font-bold uppercase tracking-wide text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 style={{ background: simulating ? "#64748b" : "#059669", fontFamily: "'Barlow Condensed',sans-serif" }}
               >
-                {simulating ? "Simuliere ..." : "Gruppen simulieren"}
+                {simulating ? t.simulating : t.simGroups}
               </button>
               <button
                 onClick={resetGroupsFn}
@@ -288,11 +291,11 @@ export default function App() {
                 className="px-3 py-1.5 rounded text-xs font-bold uppercase tracking-wide text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 style={{ background: "#64748b", fontFamily: "'Barlow Condensed',sans-serif" }}
               >
-                Reset
+                {t.reset}
               </button>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
-              {GIDS.map((g) => <GroupTable key={g} gid={g} teams={groups[g]} onReorder={handleReorder} />)}
+              {GIDS.map((g) => <GroupTable key={g} gid={g} teams={groups[g]} onReorder={handleReorder} lang={lang} />)}
             </div>
             <ThirdSel
               groups={groups}
@@ -300,11 +303,10 @@ export default function App() {
               onToggle={handleToggle}
               onAutoFill={handleAutoThirds}
               onClear={handleClearThirds}
+              lang={lang}
             />
             <div className="p-3 rounded bg-white border text-slate-500 mt-3" style={{ borderColor: "#d1d9e0", fontSize: 11 }}>
-              <strong>Anleitung:</strong> Teams per Drag & Drop (Desktop) oder Long-Press (Mobil) sortieren. Formkurve (letzte 5 Spiele): Hover/Tap auf die Punkte zeigt das Ergebnis.
-              8 Drittplatzierte wahlen, dann zum Tab "Turnierbaum" wechseln und auf Teams klicken, um den Sieger zu bestimmen.
-              Die Gewinnwahrscheinlichkeit basiert auf den Kaderwerten (Transfermarkt).
+              <strong>{t.instructionsLabel}</strong> {t.instructions}
             </div>
           </div>
         ) : (
@@ -313,7 +315,7 @@ export default function App() {
               className="font-bold text-xs uppercase tracking-wider mb-2 pb-1"
               style={{ color: "#1a2d4a", borderBottom: "2px solid #1a2d4a", fontFamily: "'Barlow Condensed',sans-serif" }}
             >
-              K.o.-Runde — Auf ein Team klicken = Sieger auswahlen
+              {t.bracketHeading}
             </h2>
             <div className="flex flex-wrap items-center gap-2 mb-2">
               <button
@@ -322,7 +324,7 @@ export default function App() {
                 className="px-3 py-1.5 rounded text-xs font-bold uppercase tracking-wide text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 style={{ background: simulating || !groupsReady ? "#64748b" : "#059669", fontFamily: "'Barlow Condensed',sans-serif" }}
               >
-                {simulating ? "Simuliere ..." : "Baum simulieren"}
+                {simulating ? t.simulating : t.simBracket}
               </button>
               <button
                 onClick={resetBracketFn}
@@ -330,16 +332,16 @@ export default function App() {
                 className="px-3 py-1.5 rounded text-xs font-bold uppercase tracking-wide text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 style={{ background: "#64748b", fontFamily: "'Barlow Condensed',sans-serif" }}
               >
-                Reset
+                {t.reset}
               </button>
               {!groupsReady && (
                 <span className="text-amber-600" style={{ fontSize: 10 }}>
-                  Erst Gruppen abschliessen (8 Drittplatzierte wahlen)
+                  {t.bracketDisabled}
                 </span>
               )}
             </div>
-            <p className="text-xs text-slate-400 mb-2 sm:hidden">← Wische zum Scrollen →</p>
-            <FullBracket groups={groups} ta={ta} winners={winners} onPick={handlePick} />
+            <p className="text-xs text-slate-400 mb-2 sm:hidden">{t.swipeHint}</p>
+            <FullBracket groups={groups} ta={ta} winners={winners} onPick={handlePick} lang={lang} />
           </div>
         )}
       </div>

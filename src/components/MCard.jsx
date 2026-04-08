@@ -4,7 +4,7 @@ import { calcProb, sn } from "../utils/helpers";
 const MH = 42;
 const CW = 128;
 
-export default function MCard({ matchId, teamA, teamB, labelA, labelB, venue, winner, onPick, style, isFinal }) {
+export default function MCard({ matchId, teamA, teamB, labelA, labelB, venue, winner, onPick, style, isFinal, lang = "de" }) {
   const probH = 3;
   const h = isFinal ? MH + 10 : MH;
   const headH = isFinal ? 15 : 13;
@@ -41,7 +41,7 @@ export default function MCard({ matchId, teamA, teamB, labelA, labelB, venue, wi
         {ok ? (
           <>
             <span className="mr-1 text-sm leading-none">{FL[team] || ""}</span>
-            <span className="truncate">{sn(team)}</span>
+            <span className="truncate">{sn(team, lang)}</span>
             {showProb && <span className="ml-auto font-mono flex-shrink-0" style={{ fontSize: 8, color: pct >= 50 ? "#16a34a" : "#94a3b8" }}>{pct}%</span>}
             {isW && !showProb && <span className="ml-auto text-emerald-600" style={{ fontSize: 9 }}>▶</span>}
           </>

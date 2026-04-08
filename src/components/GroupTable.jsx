@@ -1,11 +1,12 @@
 import { useEffect, useRef, useState } from "react";
-import { FL, FORM, MV } from "../data/constants";
+import { FL, FORM, MV, UI_DICT } from "../data/constants";
 import { fmtMV, sn } from "../utils/helpers";
 
 export const RC = ["bg-emerald-600 text-white", "bg-sky-600 text-white", "bg-amber-500 text-white", "bg-slate-400 text-white"];
 export const FC = { S: "bg-emerald-500", U: "bg-gray-400", N: "bg-red-500" };
 
-export default function GroupTable({ gid, teams, onReorder }) {
+export default function GroupTable({ gid, teams, onReorder, lang = "de" }) {
+  const t = UI_DICT[lang];
   const drag = useRef(null);
   const over = useRef(null);
 
@@ -92,8 +93,8 @@ export default function GroupTable({ gid, teams, onReorder }) {
   return (
     <div className="mb-3">
       <div className="px-3 py-1.5 rounded-t flex items-center justify-between" style={{ background: "#1a2d4a", color: "#fff" }}>
-        <span className="font-bold text-xs tracking-wide" style={{ fontFamily: "'Barlow Condensed',sans-serif" }}>GRUPPE {gid}</span>
-        <span className="text-blue-300" style={{ fontSize: 9 }}>Marktwert</span>
+        <span className="font-bold text-xs tracking-wide" style={{ fontFamily: "'Barlow Condensed',sans-serif" }}>{t.group} {gid}</span>
+        <span className="text-blue-300" style={{ fontSize: 9 }}>{t.marketValue}</span>
       </div>
       <div ref={containerRef} className="border border-t-0 rounded-b" style={{ borderColor: "#d1d9e0", WebkitTouchCallout: "none" }}>
         {teams.map((team, i) => {
@@ -149,7 +150,7 @@ export default function GroupTable({ gid, teams, onReorder }) {
               <span className="text-slate-300 mr-1 hidden sm:inline" style={{ fontSize: 10 }}>⠿</span>
               <span className={`inline-flex items-center justify-center w-5 h-4 rounded font-bold mr-1.5 flex-shrink-0 ${RC[i]}`} style={{ fontSize: 10 }}>{i + 1}</span>
               <span className="mr-1 text-sm leading-none">{FL[team] || "🏳️"}</span>
-              <span className="font-medium text-slate-800 truncate" style={{ minWidth: 0, maxWidth: 90 }}>{sn(team)}</span>
+              <span className="font-medium text-slate-800 truncate" style={{ minWidth: 0, maxWidth: 90 }}>{sn(team, lang)}</span>
 
               <div className="flex items-center gap-0.5 mx-1.5 sm:mx-2 flex-shrink-0">
                 {form.map((f, fi) => {
@@ -170,10 +171,10 @@ export default function GroupTable({ gid, teams, onReorder }) {
               </div>
 
               <div className="ml-auto flex items-center gap-1.5 flex-shrink-0">
-                <div className="hidden sm:block w-12 h-1.5 rounded-full bg-gray-200 overflow-hidden" title={`${fmtMV(mv)} €`}>
+                <div className="hidden sm:block w-12 h-1.5 rounded-full bg-gray-200 overflow-hidden" title={`${fmtMV(mv, lang)} €`}>
                   <div className="h-full rounded-full" style={{ width: `${maxMV ? (mv / maxMV) * 100 : 0}%`, background: mv >= 500 ? "#16a34a" : mv >= 200 ? "#2563eb" : mv >= 100 ? "#d97706" : "#94a3b8" }} />
                 </div>
-                <span className="font-mono text-slate-500 text-right" style={{ fontSize: 9, minWidth: 52 }}>{fmtMV(mv)} €</span>
+                <span className="font-mono text-slate-500 text-right" style={{ fontSize: 9, minWidth: 52 }}>{fmtMV(mv, lang)} €</span>
               </div>
             </div>
           );

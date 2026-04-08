@@ -1,13 +1,24 @@
-import { SH, MV } from "../data/constants";
+import { SH, SH_EN, MV, EN_TEAMS } from "../data/constants";
 import { FIN, MI, R16, SF, TS, QF, isR32id } from "../data/bracket";
 
-export const sn = (n) => SH[n] || n;
+/** Display name: short name if available, optionally translated to English */
+export const sn = (n, lang = "de") => {
+  if (lang === "en") return SH_EN[n] || EN_TEAMS[n] || n;
+  return SH[n] || n;
+};
 
-export const fmtMV = (v) => {
+/** Format market value with locale-appropriate unit */
+export const fmtMV = (v, lang = "de") => {
   if (!v) return "—";
-  if (v >= 1000) return `${(v / 1000).toFixed(2).replace(".", ",")} Mrd.`;
-  if (v >= 100) return `${v.toFixed(0)} Mio.`;
-  return `${v.toFixed(1).replace(".", ",")} Mio.`;
+  const bn = lang === "en" ? "bn" : "Mrd.";
+  const mn = lang === "en" ? "m" : "Mio.";
+  if (v >= 1000) {
+    const fmt = (v / 1000).toFixed(2);
+    return `${lang === "de" ? fmt.replace(".", ",") : fmt} ${bn}`;
+  }
+  if (v >= 100) return `${v.toFixed(0)} ${mn}`;
+  const fmt = v.toFixed(1);
+  return `${lang === "de" ? fmt.replace(".", ",") : fmt} ${mn}`;
 };
 
 export const calcProb = (mvA, mvB) => {

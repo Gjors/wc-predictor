@@ -1,4 +1,4 @@
-import { FL } from "../data/constants";
+import { FL, UI_DICT } from "../data/constants";
 import {
   CC,
   FIN,
@@ -13,7 +13,7 @@ import {
   R_R32,
   R_SF,
 } from "../data/bracket";
-import { getTeam, slotLabel } from "../utils/helpers";
+import { getTeam, sn, slotLabel } from "../utils/helpers";
 import MCard from "./MCard";
 
 const MH = 42;
@@ -21,7 +21,7 @@ const CW = 128;
 const CG = 22;
 const HALF_W = 4 * CW + 3 * CG;
 
-export function BHalf({ r32ids, r16ids, qfids, sfids, groups, ta, winners, onPick, mirror }) {
+export function BHalf({ r32ids, r16ids, qfids, sfids, groups, ta, winners, onPick, mirror, lang = "de" }) {
   const allIds = [r32ids, r16ids, qfids, sfids];
   const colX = (lvl) => {
     const idx = mirror ? 3 - lvl : lvl;
@@ -78,6 +78,7 @@ export function BHalf({ r32ids, r16ids, qfids, sfids, groups, ta, winners, onPic
               winner={winners[mid]}
               onPick={onPick}
               style={{ left: x, top: centers[mi] - MH / 2 }}
+              lang={lang}
             />
           );
         });
@@ -86,10 +87,11 @@ export function BHalf({ r32ids, r16ids, qfids, sfids, groups, ta, winners, onPic
   );
 }
 
-export function Champ({ groups, ta, winners }) {
+export function Champ({ groups, ta, winners, lang = "de" }) {
   const ws = winners[104];
   const champ = ws ? getTeam(104, ws, groups, ta, winners) : null;
   if (!champ) return null;
+  const t = UI_DICT[lang];
 
   return (
     <div
@@ -98,15 +100,16 @@ export function Champ({ groups, ta, winners }) {
     >
       <span className="text-3xl">{FL[champ] || "🏆"}</span>
       <div className="text-center">
-        <div className="text-amber-400 font-bold tracking-widest uppercase" style={{ fontSize: 10 }}>Weltmeister 2026</div>
-        <div className="text-white font-bold text-xl" style={{ fontFamily: "'Barlow Condensed',sans-serif" }}>{champ}</div>
+        <div className="text-amber-400 font-bold tracking-widest uppercase" style={{ fontSize: 10 }}>{t.champion}</div>
+        <div className="text-white font-bold text-xl" style={{ fontFamily: "'Barlow Condensed',sans-serif" }}>{sn(champ, lang)}</div>
       </div>
       <span className="text-3xl">🏆</span>
     </div>
   );
 }
 
-export function FullBracket({ groups, ta, winners, onPick }) {
+export function FullBracket({ groups, ta, winners, onPick, lang = "de" }) {
+  const t = UI_DICT[lang];
   const GAP = 36;
   const TOTAL_W = HALF_W + GAP + CW + 12 + GAP + HALF_W;
 
@@ -122,12 +125,12 @@ export function FullBracket({ groups, ta, winners, onPick }) {
   const lMid = (lSFx + finX) / 2;
   const rMid = (finX + CW + 12 + rSFx_global) / 2;
 
-  const leftLabels = ["16tel-Finale", "Achtelfinale", "Viertelfinale", "Halbfinale"];
+  const leftLabels = [t.roundR32, t.roundR16, t.roundQF, t.roundSF];
   const rightLabels = [...leftLabels].reverse();
 
   return (
     <div>
-      <Champ groups={groups} ta={ta} winners={winners} />
+      <Champ groups={groups} ta={ta} winners={winners} lang={lang} />
 
       <div className="flex items-end mb-1" style={{ width: TOTAL_W }}>
         {leftLabels.map((l, i) => (
@@ -160,7 +163,7 @@ export function FullBracket({ groups, ta, winners, onPick }) {
             fontFamily: "'Barlow Condensed',sans-serif",
           }}
         >
-          ★ FINALE ★
+          {t.final}
         </div>
         {rightLabels.map((l, i) => (
           <div
@@ -193,6 +196,7 @@ export function FullBracket({ groups, ta, winners, onPick }) {
             winners={winners}
             onPick={onPick}
             mirror={false}
+            lang={lang}
           />
         </div>
 
@@ -207,6 +211,7 @@ export function FullBracket({ groups, ta, winners, onPick }) {
             winners={winners}
             onPick={onPick}
             mirror
+            lang={lang}
           />
         </div>
 
@@ -221,6 +226,7 @@ export function FullBracket({ groups, ta, winners, onPick }) {
           onPick={onPick}
           style={{ left: finX, top: finY }}
           isFinal
+          lang={lang}
         />
 
         <svg className="absolute inset-0 pointer-events-none" width={TOTAL_W} height={HH + 10}>
