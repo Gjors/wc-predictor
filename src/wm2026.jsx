@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import GroupTable from "./components/GroupTable";
 import ThirdSel from "./components/ThirdSel";
 import { FullBracket } from "./components/Bracket";
@@ -6,9 +6,9 @@ import { GIDS, INIT_GROUPS, MV } from "./data/constants";
 import { clearDown, solveThirds } from "./utils/helpers";
 
 export default function App() {
-  const [groups, setGroups] = useState(INIT_GROUPS);
-  const [selThirds, setSelThirds] = useState([]);
-  const [winners, setWinners] = useState({});
+  const [groups, setGroups] = useState(_restored?.groups || INIT_GROUPS);
+  const [selThirds, setSelThirds] = useState(_restored?.selThirds || []);
+  const [winners, setWinners] = useState(_restored?.winners || {});
   const [tab, setTab] = useState("groups");
 
   const ta = useMemo(() => solveThirds(selThirds), [selThirds]);
@@ -47,6 +47,123 @@ export default function App() {
   }, []);
 
   const totalPicks = Object.keys(winners).length;
+  const [simulating, setSimulating] = useState(false);
+  const groupsReady = selThirds.length === 8;
+
+  // ── Simulate groups (weighted random by MV) ──
+  const simulateGroupsFn = useCallback(async () => {
+    setSimulating(true);
+    setWinners({});
+    setSelThirds([]);
+
+    // Pre-compute all simulated group orderings
+    const simGroups = {};
+    for (const gid of GIDS) {
+      simGroups[gid] = weightedShuffle(INIT_GROUPS[gid], (t) => MV[t] || 1);
+    }
+
+    // Animate one group at a time
+    for (const gid of GIDS) {
+      await delay(80);
+      setGroups((p) => ({ ...p, [gid]: simGroups[gid] }));
+    }
+
+    // Auto-select 8 best third-place teams (weighted random)
+    await delay(200);
+    const thirdScores = GIDS.map((g) => ({
+      g,
+      score: (MV[simGroups[g][2]] || 1) * (0.5 + Math.random()),
+    }));
+    thirdScores.sort((a, b) => b.score - a.score);
+    setSelThirds(thirdScores.slice(0, 8).map((t) => t.g));
+
+    setSimulating(false);
+  }, []);
+
+  const resetGroupsFn = useCallback(() => {
+    setGroups(INIT_GROUPS);
+    setSelThirds([]);
+    setWinners({});
+  }, []);
+
+  // ── Simulate bracket (weighted random by MV, round by round) ──
+  const simulateBracketFn = useCallback(async () => {
+    setSimulating(true);
+    setWinners({});
+    await delay(200);
+
+    const curGroups = groups;
+    const curTa = ta;
+    const newW = {};
+    const allMatches = [...R32, ...R16, ...QF, ...SF, FIN];
+
+    for (const match of allMatches) {
+      const teamA = getTeam(match.id, "a", curGroups, curTa, newW);
+      const teamB = getTeam(match.id, "b", curGroups, curTa, newW);
+      if (teamA && teamB) {
+        newW[match.id] = pickWinnerByMV(teamA, teamB);
+        await delay(60);
+        setWinners({ ...newW });
+      }
+    }
+
+    setSimulating(false);
+  }, [groups, ta]);
+
+  const resetBracketFn = useCallback(() => {
+    setWinners({});
+  }, []);
+
+  // ── URL sync: update address bar on every state change ──
+  useEffect(() => {
+    const encoded = encodeState(groups, selThirds, winners);
+    const url = new URL(window.location);
+    url.searchParams.set("data", encoded);
+    window.history.replaceState(null, "", url);
+  }, [groups, selThirds, winners]);
+
+  // ── Share link ──
+  const [copied, setCopied] = useState(false);
+  const handleShare = useCallback(async () => {
+    try {
+      await navigator.clipboard.writeText(window.location.href);
+    } catch {
+      const inp = document.createElement("input");
+      inp.value = window.location.href;
+      document.body.appendChild(inp);
+      inp.select();
+      document.execCommand("copy");
+      document.body.removeChild(inp);
+    }
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  }, []);
+
+  // ── Countdown to tournament start ──
+  const WM_START = new Date("2026-06-11T12:00:00").getTime();
+  const [countdown, setCountdown] = useState(() => {
+    const d = WM_START - Date.now();
+    if (d <= 0) return null;
+    return {
+      days: Math.floor(d / 86400000),
+      hours: Math.floor((d % 86400000) / 3600000),
+      minutes: Math.floor((d % 3600000) / 60000),
+    };
+  });
+
+  useEffect(() => {
+    const tick = () => {
+      const d = WM_START - Date.now();
+      if (d <= 0) { setCountdown(null); return; }
+      setCountdown({
+        days: Math.floor(d / 86400000),
+        hours: Math.floor((d % 86400000) / 3600000),
+        minutes: Math.floor((d % 3600000) / 60000),
+      });
+    };
+    const id = setInterval(tick, 60000);
+    return () => clearInterval(id);
+  }, [WM_START]);
 
   const tabBtn = (id, label) => (
     <button
@@ -74,10 +191,36 @@ export default function App() {
               <span className="hidden sm:inline">USA · Mexiko · Kanada &nbsp;|&nbsp; 11. Juni – 19. Juli 2026</span>
               <span className="sm:hidden text-amber-300 font-bold">{totalPicks}/31 Tipps</span>
             </p>
+            {countdown ? (
+              <p className="text-blue-300 font-bold" style={{ fontSize: 10, fontFamily: "'Barlow Condensed',sans-serif" }}>
+                Noch {countdown.days} Tage, {countdown.hours} Std., {countdown.minutes} Min.
+              </p>
+            ) : (
+              <p className="text-emerald-400 font-bold" style={{ fontSize: 10, fontFamily: "'Barlow Condensed',sans-serif" }}>
+                Das Turnier lauft!
+              </p>
+            )}
           </div>
-          <div className="ml-auto hidden md:flex items-center gap-3 text-blue-300" style={{ fontSize: 10 }}>
-            <span>48 Teams</span><span>·</span><span>12 Gruppen</span><span>·</span>
-            <span className="text-amber-300 font-bold">{totalPicks}/31 Tipps</span>
+          <div className="ml-auto flex items-center gap-2 sm:gap-3">
+            <div className="hidden md:flex items-center gap-3 text-blue-300" style={{ fontSize: 10 }}>
+              <span>48 Teams</span><span>·</span><span>12 Gruppen</span><span>·</span>
+              <span className="text-amber-300 font-bold">{totalPicks}/31 Tipps</span>
+            </div>
+            <button
+              onClick={handleShare}
+              className="relative px-2.5 py-1 rounded text-xs font-bold text-white transition-colors"
+              style={{ background: "#2563eb", fontFamily: "'Barlow Condensed',sans-serif", fontSize: 11 }}
+            >
+              {copied ? "Kopiert!" : "Link teilen"}
+              {copied && (
+                <span
+                  className="absolute -bottom-7 left-1/2 -translate-x-1/2 px-2 py-0.5 rounded text-white whitespace-nowrap z-50"
+                  style={{ background: "#059669", fontSize: 10 }}
+                >
+                  In Zwischenablage kopiert
+                </span>
+              )}
+            </button>
           </div>
         </div>
         <div className="flex px-5 gap-1" style={{ borderTop: "1px solid rgba(255,255,255,0.08)", background: "#15253d" }}>
@@ -95,6 +238,24 @@ export default function App() {
             >
               Gruppenphase — <span className="hidden sm:inline">Drag & Drop</span><span className="sm:hidden">Long-Press</span> zum Sortieren
             </h2>
+            <div className="flex flex-wrap gap-2 mb-3">
+              <button
+                onClick={simulateGroupsFn}
+                disabled={simulating}
+                className="px-3 py-1.5 rounded text-xs font-bold uppercase tracking-wide text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                style={{ background: simulating ? "#64748b" : "#059669", fontFamily: "'Barlow Condensed',sans-serif" }}
+              >
+                {simulating ? "Simuliere ..." : "Gruppen simulieren"}
+              </button>
+              <button
+                onClick={resetGroupsFn}
+                disabled={simulating}
+                className="px-3 py-1.5 rounded text-xs font-bold uppercase tracking-wide text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                style={{ background: "#64748b", fontFamily: "'Barlow Condensed',sans-serif" }}
+              >
+                Reset
+              </button>
+            </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
               {GIDS.map((g) => <GroupTable key={g} gid={g} teams={groups[g]} onReorder={handleReorder} />)}
             </div>
@@ -119,6 +280,29 @@ export default function App() {
             >
               K.o.-Runde — Auf ein Team klicken = Sieger auswahlen
             </h2>
+            <div className="flex flex-wrap items-center gap-2 mb-2">
+              <button
+                onClick={simulateBracketFn}
+                disabled={simulating || !groupsReady}
+                className="px-3 py-1.5 rounded text-xs font-bold uppercase tracking-wide text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                style={{ background: simulating || !groupsReady ? "#64748b" : "#059669", fontFamily: "'Barlow Condensed',sans-serif" }}
+              >
+                {simulating ? "Simuliere ..." : "Baum simulieren"}
+              </button>
+              <button
+                onClick={resetBracketFn}
+                disabled={simulating}
+                className="px-3 py-1.5 rounded text-xs font-bold uppercase tracking-wide text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                style={{ background: "#64748b", fontFamily: "'Barlow Condensed',sans-serif" }}
+              >
+                Reset
+              </button>
+              {!groupsReady && (
+                <span className="text-amber-600" style={{ fontSize: 10 }}>
+                  Erst Gruppen abschliessen (8 Drittplatzierte wahlen)
+                </span>
+              )}
+            </div>
             <p className="text-xs text-slate-400 mb-2 sm:hidden">← Wische zum Scrollen →</p>
             <FullBracket groups={groups} ta={ta} winners={winners} onPick={handlePick} />
           </div>

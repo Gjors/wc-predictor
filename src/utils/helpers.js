@@ -1,4 +1,4 @@
-import { SH } from "../data/constants";
+import { SH, MV } from "../data/constants";
 import { FIN, MI, R16, SF, TS, QF, isR32id } from "../data/bracket";
 
 export const sn = (n) => SH[n] || n;
@@ -84,4 +84,31 @@ export function clearDown(mid, winners) {
       }
     }
   });
+}
+
+// ─── Simulation helpers ─────────────────────────────────────────────
+
+/** Weighted random shuffle: pick items one by one with probability proportional to weightFn */
+export function weightedShuffle(items, weightFn) {
+  const result = [];
+  const remaining = items.map((item) => ({ item, w: weightFn(item) }));
+  while (remaining.length > 0) {
+    const total = remaining.reduce((s, r) => s + r.w, 0);
+    let rand = Math.random() * total;
+    let idx = 0;
+    for (let i = 0; i < remaining.length; i++) {
+      rand -= remaining[i].w;
+      if (rand <= 0) { idx = i; break; }
+    }
+    result.push(remaining[idx].item);
+    remaining.splice(idx, 1);
+  }
+  return result;
+}
+
+/** Pick match winner ('a' or 'b') based on market value weighted probability */
+export function pickWinnerByMV(teamA, teamB) {
+  const mvA = MV[teamA] || 1;
+  const mvB = MV[teamB] || 1;
+  return Math.random() < mvA / (mvA + mvB) ? "a" : "b";
 }
