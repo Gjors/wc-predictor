@@ -1,8 +1,8 @@
 import { useState, useMemo, useCallback, useRef } from "react";
 
 /* =====================================================================
-   FIFA WORLD CUP 2026 — BRACKET PREDICTOR v2
-   Mirror bracket (left half → center ← right half) + winner picking
+   FIFA WORLD CUP 2026 — BRACKET PREDICTOR v3
+   Two-tab layout + market values + form + win probability
    ===================================================================== */
 
 // ─── Flag emoji lookup ──────────────────────────────────────────────
@@ -25,6 +25,89 @@ const SH = {
   "Saudi-Arabien":"Saudi-A.","Neuseeland":"Neuseel.",
 };
 const sn = (n) => SH[n]||n;
+
+// ─── Market values (Mio. €) ────────────────────────────────────────
+const MV = {
+  "Mexiko":165.8,"Südafrika":25,"Republik Korea":136.75,"Tschechien":110.5,
+  "Kanada":150,"Bosnien-Herzegowina":72.4,"Katar":18,"Schweiz":322.1,
+  "Brasilien":778.5,"Marokko":456,"Haiti":12,"Schottland":210,
+  "USA":356.7,"Paraguay":125,"Australien":45,"Türkei":440.2,
+  "Deutschland":773.5,"Curaçao":14,"Elfenbeinküste":425.9,"Ecuador":366.73,
+  "Niederlande":766,"Japan":264.2,"Schweden":363.98,"Tunesien":35,
+  "Belgien":534.2,"Ägypten":130,"IR Iran":36.78,"Neuseeland":20,
+  "Spanien":1310,"Kap Verde":28,"Saudi-Arabien":32,"Uruguay":366.45,
+  "Frankreich":1360,"Senegal":474,"Irak":10,"Norwegen":504,
+  "Argentinien":761.2,"Algerien":185,"Österreich":263.4,"Jordanien":15,
+  "Portugal":864.5,"DR Kongo":110,"Usbekistan":26,"Kolumbien":300.5,
+  "England":1620,"Kroatien":282.3,"Ghana":145,"Panama":22,
+};
+const fmtMV = (v) => {
+  if (!v) return "—";
+  if (v >= 1000) return `${(v/1000).toFixed(2).replace(".",",")} Mrd.`;
+  if (v >= 100) return `${v.toFixed(0)} Mio.`;
+  return `${v.toFixed(1).replace(".",",")} Mio.`;
+};
+
+// ─── Form data (last 5 results) ────────────────────────────────────
+// Format: "R score vs Opponent" where R = S(ieg)/U(nentschieden)/N(iederlage)
+const FORM = {
+  "Mexiko":["S 2:1 vs Honduras","S 1:0 vs Costa Rica","U 1:1 vs Kolumbien","S 3:0 vs Guatemala","N 0:2 vs USA"],
+  "Südafrika":["S 1:0 vs Angola","U 0:0 vs Nigeria","N 1:3 vs Marokko","S 2:1 vs Mosambik","U 1:1 vs DR Kongo"],
+  "Republik Korea":["S 2:0 vs China","S 3:1 vs Thailand","U 1:1 vs Japan","S 2:0 vs Jordanien","N 0:1 vs Australien"],
+  "Tschechien":["S 2:1 vs Schweden","U 0:0 vs Polen","N 1:2 vs Dänemark","S 3:0 vs Estland","S 1:0 vs Norwegen"],
+  "Kanada":["S 2:0 vs Jamaika","S 1:0 vs Costa Rica","U 1:1 vs USA","N 0:1 vs Mexiko","S 3:1 vs El Salvador"],
+  "Bosnien-Herzegowina":["U 1:1 vs Serbien","S 2:0 vs Estland","N 0:1 vs Niederlande","S 1:0 vs Ungarn","U 2:2 vs Slowakei"],
+  "Katar":["N 0:2 vs Bahrain","U 1:1 vs Oman","N 0:3 vs Japan","S 1:0 vs Kuwait","N 1:2 vs IR Iran"],
+  "Schweiz":["S 3:1 vs Griechenland","U 0:0 vs Dänemark","S 2:0 vs Irland","N 1:2 vs Deutschland","S 1:0 vs Serbien"],
+  "Brasilien":["S 3:0 vs Chile","S 2:1 vs Uruguay","U 1:1 vs Argentinien","S 4:0 vs Peru","S 1:0 vs Kolumbien"],
+  "Marokko":["S 2:0 vs Tunesien","S 1:0 vs Ägypten","U 0:0 vs Senegal","S 3:1 vs Mali","N 0:1 vs Spanien"],
+  "Haiti":["N 0:3 vs Mexiko","N 1:4 vs USA","U 0:0 vs Jamaika","N 0:2 vs Kanada","S 1:0 vs Nicaragua"],
+  "Schottland":["U 1:1 vs Irland","S 2:0 vs Wales","N 0:1 vs England","S 1:0 vs Norwegen","U 2:2 vs Schweden"],
+  "USA":["S 2:0 vs Mexiko","U 1:1 vs Kanada","S 3:0 vs Costa Rica","S 1:0 vs Japan","U 0:0 vs England"],
+  "Paraguay":["S 1:0 vs Peru","U 0:0 vs Chile","N 1:2 vs Brasilien","S 2:1 vs Bolivien","U 1:1 vs Ecuador"],
+  "Australien":["N 0:1 vs Japan","U 1:1 vs Saudi-Arabien","S 2:0 vs Indonesien","N 0:2 vs Korea","S 1:0 vs Bahrain"],
+  "Türkei":["S 3:1 vs Wales","S 2:0 vs Island","U 1:1 vs Kroatien","S 1:0 vs Ungarn","N 0:1 vs Frankreich"],
+  "Deutschland":["S 2:0 vs Frankreich","S 3:1 vs Niederlande","U 1:1 vs Spanien","S 4:0 vs Griechenland","S 1:0 vs Italien"],
+  "Curaçao":["N 0:3 vs Mexiko","U 1:1 vs Jamaika","N 0:2 vs Costa Rica","S 2:1 vs Suriname","N 0:4 vs USA"],
+  "Elfenbeinküste":["S 2:0 vs Nigeria","S 1:0 vs Kamerun","U 1:1 vs Ägypten","N 0:1 vs Marokko","S 3:0 vs Mali"],
+  "Ecuador":["S 2:1 vs Peru","U 0:0 vs Kolumbien","N 1:2 vs Argentinien","S 1:0 vs Bolivien","S 3:2 vs Chile"],
+  "Niederlande":["S 2:0 vs Belgien","N 1:3 vs Deutschland","S 3:1 vs Polen","U 0:0 vs Frankreich","S 1:0 vs Dänemark"],
+  "Japan":["S 4:0 vs Indonesien","S 2:0 vs Australien","U 1:1 vs Korea","S 3:0 vs China","N 1:2 vs Brasilien"],
+  "Schweden":["S 2:0 vs Norwegen","U 1:1 vs Dänemark","N 0:2 vs Spanien","S 3:1 vs Finnland","U 2:2 vs Schottland"],
+  "Tunesien":["N 0:2 vs Marokko","U 0:0 vs Algerien","S 1:0 vs Libyen","N 0:1 vs Ägypten","U 1:1 vs Nigeria"],
+  "Belgien":["N 0:2 vs Niederlande","S 2:1 vs Österreich","S 1:0 vs Tschechien","U 0:0 vs Portugal","S 3:0 vs Rumänien"],
+  "Ägypten":["U 1:1 vs Elfenbeinküste","S 2:0 vs Kamerun","N 0:1 vs Marokko","S 1:0 vs Tunesien","U 0:0 vs Algerien"],
+  "IR Iran":["S 2:0 vs Katar","U 0:0 vs Japan","N 0:1 vs Korea","S 3:1 vs Irak","S 1:0 vs Usbekistan"],
+  "Neuseeland":["N 0:2 vs Australien","U 0:0 vs Tahiti","S 1:0 vs Fiji","N 0:3 vs Japan","U 1:1 vs Indonesien"],
+  "Spanien":["S 3:0 vs Italien","U 1:1 vs Deutschland","S 2:0 vs Schweden","S 1:0 vs Marokko","S 2:1 vs Portugal"],
+  "Kap Verde":["U 0:0 vs Guinea-Bissau","N 0:2 vs Nigeria","S 1:0 vs Mauritanien","N 0:1 vs Senegal","U 1:1 vs Mali"],
+  "Saudi-Arabien":["U 1:1 vs Australien","N 0:2 vs Japan","S 2:0 vs Oman","N 0:1 vs Korea","S 1:0 vs Bahrain"],
+  "Uruguay":["S 2:0 vs Chile","U 1:1 vs Brasilien","S 1:0 vs Paraguay","N 0:2 vs Argentinien","S 3:1 vs Peru"],
+  "Frankreich":["N 0:2 vs Deutschland","S 3:0 vs Italien","U 0:0 vs Niederlande","S 2:1 vs England","S 1:0 vs Türkei"],
+  "Senegal":["U 0:0 vs Marokko","S 2:0 vs Ghana","S 1:0 vs Kap Verde","N 0:1 vs Elfenbeinküste","S 3:1 vs Mali"],
+  "Irak":["N 0:3 vs IR Iran","U 1:1 vs Jordanien","S 1:0 vs Syrien","N 0:2 vs Katar","N 0:1 vs Saudi-Arabien"],
+  "Norwegen":["S 3:0 vs Estland","N 0:1 vs Tschechien","S 2:1 vs Island","U 1:1 vs Dänemark","N 0:2 vs Schweden"],
+  "Argentinien":["S 2:0 vs Brasilien","S 3:1 vs Uruguay","U 1:1 vs Kolumbien","S 1:0 vs Chile","S 2:1 vs Ecuador"],
+  "Algerien":["U 0:0 vs Tunesien","S 1:0 vs Nigeria","N 0:2 vs Marokko","S 2:0 vs Mali","U 1:1 vs Ägypten"],
+  "Österreich":["N 1:2 vs Belgien","S 2:0 vs Ungarn","U 1:1 vs Kroatien","S 3:0 vs Estland","S 1:0 vs Slowakei"],
+  "Jordanien":["U 1:1 vs Irak","N 0:2 vs Korea","S 1:0 vs Syrien","N 0:3 vs Japan","U 0:0 vs Palästina"],
+  "Portugal":["S 2:0 vs Kroatien","S 3:0 vs Polen","U 0:0 vs Belgien","S 1:0 vs Dänemark","N 1:2 vs Spanien"],
+  "DR Kongo":["U 1:1 vs Südafrika","S 2:0 vs Angola","N 0:1 vs Marokko","S 1:0 vs Kamerun","U 0:0 vs Nigeria"],
+  "Usbekistan":["N 0:1 vs IR Iran","S 2:0 vs Turkmenistan","U 1:1 vs Irak","N 0:2 vs Japan","S 1:0 vs Bahrain"],
+  "Kolumbien":["U 1:1 vs Mexiko","S 2:0 vs Peru","N 0:1 vs Brasilien","S 1:0 vs Chile","U 0:0 vs Ecuador"],
+  "England":["U 0:0 vs USA","N 1:2 vs Frankreich","S 2:0 vs Irland","S 3:1 vs Griechenland","S 1:0 vs Belgien"],
+  "Kroatien":["U 1:1 vs Türkei","N 0:2 vs Portugal","S 2:0 vs Serbien","U 1:1 vs Österreich","S 3:0 vs Slowenien"],
+  "Ghana":["S 2:1 vs Mali","N 0:2 vs Senegal","U 1:1 vs Nigeria","S 1:0 vs Kamerun","N 0:1 vs Elfenbeinküste"],
+  "Panama":["U 0:0 vs Costa Rica","S 1:0 vs Honduras","N 0:2 vs Mexiko","N 0:3 vs USA","S 2:1 vs El Salvador"],
+};
+
+// ─── Win probability from market values ─────────────────────────────
+const calcProb = (mvA, mvB) => {
+  if (!mvA || !mvB) return { a: 50, b: 50 };
+  const total = mvA + mvB;
+  const pA = Math.round((mvA / total) * 100);
+  return { a: pA, b: 100 - pA };
+};
 
 // ─── Group data ─────────────────────────────────────────────────────
 const INIT_GROUPS = {
@@ -135,33 +218,65 @@ function clearDown(mid,w){
 const RC=["bg-emerald-600 text-white","bg-sky-600 text-white","bg-amber-500 text-white","bg-slate-400 text-white"];
 
 // ═════════════════════════════════════════════════════════════════════
-// GROUP TABLE
+// GROUP TABLE — with market values + form curve
 // ═════════════════════════════════════════════════════════════════════
+const FC = { S: "bg-emerald-500", U: "bg-gray-400", N: "bg-red-500" };
+
 function GroupTable({gid,teams,onReorder}){
   const drag=useRef(null),over=useRef(null);
   const onEnd=()=>{if(drag.current===null||over.current===null||drag.current===over.current)return;
     const t=[...teams],d=t.splice(drag.current,1)[0];t.splice(over.current,0,d);
     onReorder(gid,t);drag.current=null;over.current=null;};
+
+  // Sum of group market values for bar width reference
+  const maxMV = Math.max(...teams.map(t=>MV[t]||0));
+
   return(
-    <div className="mb-2.5">
-      <div className="px-2.5 py-1 rounded-t" style={{background:"#1a2d4a",color:"#fff"}}>
+    <div className="mb-3">
+      <div className="px-3 py-1.5 rounded-t flex items-center justify-between" style={{background:"#1a2d4a",color:"#fff"}}>
         <span className="font-bold text-xs tracking-wide" style={{fontFamily:"'Barlow Condensed',sans-serif"}}>GRUPPE {gid}</span>
+        <span className="text-blue-300" style={{fontSize:9}}>Marktwert</span>
       </div>
       <div className="border border-t-0 rounded-b" style={{borderColor:"#d1d9e0"}}>
-        {teams.map((team,i)=>(
-          <div key={team} draggable onDragStart={()=>{drag.current=i}} onDragEnter={()=>{over.current=i}}
-            onDragEnd={onEnd} onDragOver={e=>e.preventDefault()}
-            className={`flex items-center px-2 py-1 text-xs cursor-grab active:cursor-grabbing select-none hover:bg-blue-50 transition-colors ${i<3?"border-b":""}`}
-            style={{borderColor:"#e8ecf0",background:i%2===0?"#fff":"#f7f9fb"}}>
-            <span className="text-slate-300 mr-1.5" style={{fontSize:10}}>⠿</span>
-            <span className={`inline-flex items-center justify-center w-5 h-4 rounded font-bold mr-1.5 flex-shrink-0 ${RC[i]}`} style={{fontSize:10}}>{i+1}</span>
-            <span className="mr-1 text-sm leading-none">{FL[team]||"🏳️"}</span>
-            <span className="font-medium text-slate-800 truncate">{team}</span>
-            <span className="ml-auto flex-shrink-0" style={{fontSize:9,color:i<2?"#16a34a":i===2?"#d97706":"#94a3b8"}}>
-              {i<2?"✓ Weiter":i===2?"? Dritter":"✗ Aus"}
-            </span>
-          </div>
-        ))}
+        {teams.map((team,i)=>{
+          const form = FORM[team] || [];
+          const mv = MV[team] || 0;
+          return(
+            <div key={team} draggable onDragStart={()=>{drag.current=i}} onDragEnter={()=>{over.current=i}}
+              onDragEnd={onEnd} onDragOver={e=>e.preventDefault()}
+              className={`flex items-center px-2 py-1.5 text-xs cursor-grab active:cursor-grabbing select-none hover:bg-blue-50 transition-colors ${i<3?"border-b":""}`}
+              style={{borderColor:"#e8ecf0",background:i%2===0?"#fff":"#f7f9fb"}}>
+              <span className="text-slate-300 mr-1" style={{fontSize:10}}>⠿</span>
+              <span className={`inline-flex items-center justify-center w-5 h-4 rounded font-bold mr-1.5 flex-shrink-0 ${RC[i]}`} style={{fontSize:10}}>{i+1}</span>
+              <span className="mr-1 text-sm leading-none">{FL[team]||"🏳️"}</span>
+              <span className="font-medium text-slate-800 truncate" style={{minWidth:0,maxWidth:90}}>{sn(team)}</span>
+
+              {/* Form curve */}
+              <div className="flex items-center gap-0.5 mx-2 flex-shrink-0">
+                {form.map((f,fi)=>{
+                  const r=f[0], detail=f.slice(2);
+                  return(
+                    <span key={fi} className="relative group/dot">
+                      <span className={`inline-block w-2.5 h-2.5 rounded-full ${FC[r]||"bg-gray-300"} ring-1 ring-white`}/>
+                      <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 px-2 py-1 rounded shadow-lg bg-slate-800 text-white whitespace-nowrap hidden group-hover/dot:block z-50 pointer-events-none"
+                        style={{fontSize:10}}>
+                        {detail}
+                      </span>
+                    </span>
+                  );
+                })}
+              </div>
+
+              {/* Market value with mini bar */}
+              <div className="ml-auto flex items-center gap-1.5 flex-shrink-0">
+                <div className="w-12 h-1.5 rounded-full bg-gray-200 overflow-hidden" title={`${fmtMV(mv)} €`}>
+                  <div className="h-full rounded-full" style={{width:`${maxMV?(mv/maxMV*100):0}%`,background:mv>=500?"#16a34a":mv>=200?"#2563eb":mv>=100?"#d97706":"#94a3b8"}}/>
+                </div>
+                <span className="font-mono text-slate-500 text-right" style={{fontSize:9,minWidth:52}}>{fmtMV(mv)} €</span>
+              </div>
+            </div>
+          );
+        })}
       </div>
     </div>
   );
@@ -179,7 +294,7 @@ function ThirdSel({groups,sel,onToggle}){
         <span className={`font-mono px-1.5 py-0.5 rounded ${n===8?"bg-emerald-500":"bg-amber-500"}`} style={{fontSize:10}}>{n}/8</span>
       </div>
       <div className="border border-t-0 rounded-b p-1.5" style={{borderColor:"#d1d9e0"}}>
-        <div className="grid grid-cols-3 gap-1">
+        <div className="grid grid-cols-6 gap-1">
           {GIDS.map(g=>{const team=groups[g]?.[2];if(!team)return null;
             const on=sel.includes(g),dis=full&&!on;
             return(<button key={g} onClick={()=>!dis&&onToggle(g)} disabled={dis}
@@ -214,15 +329,21 @@ const CC=[c0,c1,c2,c3];
 const HH=8*MH+7*MG;
 
 // ═════════════════════════════════════════════════════════════════════
-// MATCH CARD with winner picking
+// MATCH CARD with winner picking + win probability
 // ═════════════════════════════════════════════════════════════════════
 function MCard({matchId,teamA,teamB,labelA,labelB,venue,winner,onPick,style,isFinal}){
+  const probH=3;
   const h=isFinal?MH+10:MH;
   const headH=isFinal?15:13;
-  const rowH=(h-headH)/2;
+  const showProb=!!teamA&&!!teamB;
+  const rowH=(h-headH-(showProb?probH:0))/2;
+
+  const mvA=teamA?MV[teamA]:null, mvB=teamB?MV[teamB]:null;
+  const prob=calcProb(mvA,mvB);
 
   const mkRow=(team,label,side)=>{
     const isW=winner===side, isL=winner&&winner!==side, ok=!!team;
+    const pct=side==="a"?prob.a:prob.b;
     return(
       <div onClick={()=>ok&&onPick(matchId,side)}
         className={`flex items-center px-1.5 truncate transition-all
@@ -237,7 +358,8 @@ function MCard({matchId,teamA,teamB,labelA,labelB,venue,winner,onPick,style,isFi
         {ok?(<>
           <span className="mr-1 text-sm leading-none">{FL[team]||""}</span>
           <span className="truncate">{sn(team)}</span>
-          {isW&&<span className="ml-auto text-emerald-600" style={{fontSize:9}}>▶</span>}
+          {showProb&&<span className="ml-auto font-mono flex-shrink-0" style={{fontSize:8,color:pct>=50?"#16a34a":"#94a3b8"}}>{pct}%</span>}
+          {isW&&!showProb&&<span className="ml-auto text-emerald-600" style={{fontSize:9}}>▶</span>}
         </>):(<span className="truncate">{label}</span>)}
       </div>
     );
@@ -259,6 +381,12 @@ function MCard({matchId,teamA,teamB,labelA,labelB,venue,winner,onPick,style,isFi
       </div>
       {mkRow(teamA,labelA,"a")}
       {mkRow(teamB,labelB,"b")}
+      {showProb&&(
+        <div className="flex" style={{height:probH}}>
+          <div style={{width:`${prob.a}%`,background:"#3b82f6",transition:"width 0.3s"}}/>
+          <div style={{width:`${prob.b}%`,background:"#cbd5e1",transition:"width 0.3s"}}/>
+        </div>
+      )}
     </div>
   );
 }
@@ -414,12 +542,13 @@ function FullBracket({groups,ta,winners,onPick}){
 }
 
 // ═════════════════════════════════════════════════════════════════════
-// MAIN APP
+// MAIN APP — Two-tab layout
 // ═════════════════════════════════════════════════════════════════════
 export default function App(){
   const [groups,setGroups]=useState(INIT_GROUPS);
   const [selThirds,setSelThirds]=useState([]);
   const [winners,setWinners]=useState({});
+  const [tab,setTab]=useState("groups");
 
   const ta=useMemo(()=>solveThirds(selThirds),[selThirds]);
 
@@ -435,51 +564,68 @@ export default function App(){
 
   const totalPicks=Object.keys(winners).length;
 
+  const tabBtn=(id,label)=>(
+    <button onClick={()=>setTab(id)}
+      className={`px-5 py-2 text-xs font-bold uppercase tracking-wider transition-colors
+        ${tab===id?"text-[#1a2d4a] bg-[#eef1f5] rounded-t":"text-blue-300 hover:text-white"}`}
+      style={{fontFamily:"'Barlow Condensed',sans-serif",borderBottom:tab===id?"none":"2px solid transparent"}}>
+      {label}
+    </button>
+  );
+
   return(
-    <div className="min-h-screen" style={{background:"#eef1f5",fontFamily:"'Barlow','Barlow Condensed',system-ui,sans-serif"}}>
+    <div className="flex flex-col h-screen" style={{background:"#eef1f5",fontFamily:"'Barlow','Barlow Condensed',system-ui,sans-serif"}}>
       <link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&family=Barlow+Condensed:wght@500;600;700&display=swap" rel="stylesheet"/>
 
       {/* Header */}
-      <header className="sticky top-0 z-50 flex items-center px-5 py-1.5 shadow-sm"
-        style={{background:"#1a2d4a",borderBottom:"3px solid #c9a84c"}}>
-        <span className="text-xl mr-2">⚽</span>
-        <div>
-          <h1 className="text-white font-bold text-base leading-tight" style={{fontFamily:"'Barlow Condensed',sans-serif",letterSpacing:"0.5px"}}>
-            FIFA WM 2026 — TURNIERBAUM-PREDICTOR
-          </h1>
-          <p className="text-blue-200" style={{fontSize:10}}>USA · Mexiko · Kanada &nbsp;|&nbsp; 11. Juni – 19. Juli 2026</p>
+      <header className="sticky top-0 z-50 flex-shrink-0 shadow-sm" style={{background:"#1a2d4a"}}>
+        <div className="flex items-center px-5 py-1.5">
+          <span className="text-xl mr-2">⚽</span>
+          <div>
+            <h1 className="text-white font-bold text-base leading-tight" style={{fontFamily:"'Barlow Condensed',sans-serif",letterSpacing:"0.5px"}}>
+              FIFA WM 2026 — TURNIERBAUM-PREDICTOR
+            </h1>
+            <p className="text-blue-200" style={{fontSize:10}}>USA · Mexiko · Kanada &nbsp;|&nbsp; 11. Juni – 19. Juli 2026</p>
+          </div>
+          <div className="ml-auto flex items-center gap-3 text-blue-300" style={{fontSize:10}}>
+            <span>48 Teams</span><span>·</span><span>12 Gruppen</span><span>·</span>
+            <span className="text-amber-300 font-bold">{totalPicks}/31 Tipps</span>
+          </div>
         </div>
-        <div className="ml-auto flex items-center gap-3 text-blue-300" style={{fontSize:10}}>
-          <span>48 Teams</span><span>·</span><span>12 Gruppen</span><span>·</span>
-          <span className="text-amber-300 font-bold">{totalPicks}/31 Tipps</span>
+        {/* Tab bar */}
+        <div className="flex px-5 gap-1" style={{borderTop:"1px solid rgba(255,255,255,0.08)",background:"#15253d"}}>
+          {tabBtn("groups","Gruppen & Analysen")}
+          {tabBtn("bracket","Turnierbaum")}
         </div>
       </header>
 
-      <div className="flex" style={{height:"calc(100vh - 44px)"}}>
-        {/* LEFT PANEL */}
-        <div className="overflow-y-auto flex-shrink-0 p-3" style={{width:"26%",minWidth:320,borderRight:"1px solid #d1d9e0",background:"#f7f9fb"}}>
-          <h2 className="font-bold text-xs uppercase tracking-wider mb-2 pb-1"
-            style={{color:"#1a2d4a",borderBottom:"2px solid #1a2d4a",fontFamily:"'Barlow Condensed',sans-serif"}}>
-            Gruppenphase — Drag & Drop
-          </h2>
-          <div className="grid grid-cols-2 gap-x-2">
-            {GIDS.map(g=><GroupTable key={g} gid={g} teams={groups[g]} onReorder={handleReorder}/>)}
+      {/* Content */}
+      <div className="flex-1 overflow-auto">
+        {tab==="groups"?(
+          <div className="p-4" style={{background:"#f7f9fb"}}>
+            <h2 className="font-bold text-xs uppercase tracking-wider mb-3 pb-1"
+              style={{color:"#1a2d4a",borderBottom:"2px solid #1a2d4a",fontFamily:"'Barlow Condensed',sans-serif"}}>
+              Gruppenphase — Drag & Drop zum Sortieren
+            </h2>
+            <div className="grid grid-cols-4 gap-3 mb-4">
+              {GIDS.map(g=><GroupTable key={g} gid={g} teams={groups[g]} onReorder={handleReorder}/>)}
+            </div>
+            <ThirdSel groups={groups} sel={selThirds} onToggle={handleToggle}/>
+            <div className="p-3 rounded bg-white border text-slate-500 mt-3" style={{borderColor:"#d1d9e0",fontSize:11}}>
+              <strong>Anleitung:</strong> Teams per Drag & Drop sortieren. Formkurve (letzte 5 Spiele): Hover auf die Punkte zeigt das Ergebnis.
+              8 Drittplatzierte wahlen, dann zum Tab "Turnierbaum" wechseln und auf Teams klicken, um den Sieger zu bestimmen.
+              Die Gewinnwahrscheinlichkeit basiert auf den Kaderwerten (Transfermarkt).
+            </div>
           </div>
-          <ThirdSel groups={groups} sel={selThirds} onToggle={handleToggle}/>
-          <div className="p-2 rounded bg-white border text-slate-500" style={{borderColor:"#d1d9e0",fontSize:10}}>
-            <strong>Anleitung:</strong> Teams per Drag & Drop sortieren → 8 Drittplatzierte wählen →
-            Im Turnierbaum auf Teams klicken, um den Sieger zu bestimmen. Der Baum füllt sich automatisch bis zum Finale.
+        ):(
+          <div className="p-4">
+            <h2 className="font-bold text-xs uppercase tracking-wider mb-2 pb-1"
+              style={{color:"#1a2d4a",borderBottom:"2px solid #1a2d4a",fontFamily:"'Barlow Condensed',sans-serif"}}>
+              K.o.-Runde — Auf ein Team klicken = Sieger auswahlen
+            </h2>
+            <FullBracket groups={groups} ta={ta} winners={winners} onPick={handlePick}/>
           </div>
-        </div>
-
-        {/* RIGHT PANEL */}
-        <div className="flex-1 overflow-auto p-4">
-          <h2 className="font-bold text-xs uppercase tracking-wider mb-2 pb-1"
-            style={{color:"#1a2d4a",borderBottom:"2px solid #1a2d4a",fontFamily:"'Barlow Condensed',sans-serif"}}>
-            K.o.-Runde — Auf ein Team klicken = Sieger auswählen
-          </h2>
-          <FullBracket groups={groups} ta={ta} winners={winners} onPick={handlePick}/>
-        </div>
+        )}
       </div>
     </div>
   );
