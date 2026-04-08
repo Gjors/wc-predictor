@@ -2,8 +2,11 @@ import { useCallback, useMemo, useState } from "react";
 import GroupTable from "./components/GroupTable";
 import ThirdSel from "./components/ThirdSel";
 import { FullBracket } from "./components/Bracket";
-import { GIDS, INIT_GROUPS } from "./data/constants";
-import { clearDown, solveThirds } from "./utils/helpers";
+import { GIDS, INIT_GROUPS, MV } from "./data/constants";
+import { R32, R16, QF, SF, FIN } from "./data/bracket";
+import { clearDown, solveThirds, getTeam, weightedShuffle, pickWinnerByMV } from "./utils/helpers";
+
+const delay = (ms) => new Promise((r) => setTimeout(r, ms));
 
 export default function App() {
   const [groups, setGroups] = useState(INIT_GROUPS);
@@ -33,6 +36,72 @@ export default function App() {
   }, []);
 
   const totalPicks = Object.keys(winners).length;
+  const [simulating, setSimulating] = useState(false);
+  const groupsReady = selThirds.length === 8;
+
+  // ── Simulate groups (weighted random by MV) ──
+  const simulateGroupsFn = useCallback(async () => {
+    setSimulating(true);
+    setWinners({});
+    setSelThirds([]);
+
+    // Pre-compute all simulated group orderings
+    const simGroups = {};
+    for (const gid of GIDS) {
+      simGroups[gid] = weightedShuffle(INIT_GROUPS[gid], (t) => MV[t] || 1);
+    }
+
+    // Animate one group at a time
+    for (const gid of GIDS) {
+      await delay(80);
+      setGroups((p) => ({ ...p, [gid]: simGroups[gid] }));
+    }
+
+    // Auto-select 8 best third-place teams (weighted random)
+    await delay(200);
+    const thirdScores = GIDS.map((g) => ({
+      g,
+      score: (MV[simGroups[g][2]] || 1) * (0.5 + Math.random()),
+    }));
+    thirdScores.sort((a, b) => b.score - a.score);
+    setSelThirds(thirdScores.slice(0, 8).map((t) => t.g));
+
+    setSimulating(false);
+  }, []);
+
+  const resetGroupsFn = useCallback(() => {
+    setGroups(INIT_GROUPS);
+    setSelThirds([]);
+    setWinners({});
+  }, []);
+
+  // ── Simulate bracket (weighted random by MV, round by round) ──
+  const simulateBracketFn = useCallback(async () => {
+    setSimulating(true);
+    setWinners({});
+    await delay(200);
+
+    const curGroups = groups;
+    const curTa = ta;
+    const newW = {};
+    const allMatches = [...R32, ...R16, ...QF, ...SF, FIN];
+
+    for (const match of allMatches) {
+      const teamA = getTeam(match.id, "a", curGroups, curTa, newW);
+      const teamB = getTeam(match.id, "b", curGroups, curTa, newW);
+      if (teamA && teamB) {
+        newW[match.id] = pickWinnerByMV(teamA, teamB);
+        await delay(60);
+        setWinners({ ...newW });
+      }
+    }
+
+    setSimulating(false);
+  }, [groups, ta]);
+
+  const resetBracketFn = useCallback(() => {
+    setWinners({});
+  }, []);
 
   const tabBtn = (id, label) => (
     <button
@@ -81,6 +150,24 @@ export default function App() {
             >
               Gruppenphase — <span className="hidden sm:inline">Drag & Drop</span><span className="sm:hidden">Long-Press</span> zum Sortieren
             </h2>
+            <div className="flex flex-wrap gap-2 mb-3">
+              <button
+                onClick={simulateGroupsFn}
+                disabled={simulating}
+                className="px-3 py-1.5 rounded text-xs font-bold uppercase tracking-wide text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                style={{ background: simulating ? "#64748b" : "#059669", fontFamily: "'Barlow Condensed',sans-serif" }}
+              >
+                {simulating ? "Simuliere ..." : "Gruppen simulieren"}
+              </button>
+              <button
+                onClick={resetGroupsFn}
+                disabled={simulating}
+                className="px-3 py-1.5 rounded text-xs font-bold uppercase tracking-wide text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                style={{ background: "#64748b", fontFamily: "'Barlow Condensed',sans-serif" }}
+              >
+                Reset
+              </button>
+            </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
               {GIDS.map((g) => <GroupTable key={g} gid={g} teams={groups[g]} onReorder={handleReorder} />)}
             </div>
@@ -99,6 +186,29 @@ export default function App() {
             >
               K.o.-Runde — Auf ein Team klicken = Sieger auswahlen
             </h2>
+            <div className="flex flex-wrap items-center gap-2 mb-2">
+              <button
+                onClick={simulateBracketFn}
+                disabled={simulating || !groupsReady}
+                className="px-3 py-1.5 rounded text-xs font-bold uppercase tracking-wide text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                style={{ background: simulating || !groupsReady ? "#64748b" : "#059669", fontFamily: "'Barlow Condensed',sans-serif" }}
+              >
+                {simulating ? "Simuliere ..." : "Baum simulieren"}
+              </button>
+              <button
+                onClick={resetBracketFn}
+                disabled={simulating}
+                className="px-3 py-1.5 rounded text-xs font-bold uppercase tracking-wide text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                style={{ background: "#64748b", fontFamily: "'Barlow Condensed',sans-serif" }}
+              >
+                Reset
+              </button>
+              {!groupsReady && (
+                <span className="text-amber-600" style={{ fontSize: 10 }}>
+                  Erst Gruppen abschliessen (8 Drittplatzierte wahlen)
+                </span>
+              )}
+            </div>
             <p className="text-xs text-slate-400 mb-2 sm:hidden">← Wische zum Scrollen →</p>
             <FullBracket groups={groups} ta={ta} winners={winners} onPick={handlePick} />
           </div>
