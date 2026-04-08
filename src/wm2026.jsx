@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import GroupTable from "./components/GroupTable";
 import ThirdSel from "./components/ThirdSel";
 import { FullBracket } from "./components/Bracket";
@@ -8,10 +8,35 @@ import { clearDown, solveThirds, getTeam, weightedShuffle, pickWinnerByMV } from
 
 const delay = (ms) => new Promise((r) => setTimeout(r, ms));
 
+// ─── URL state serialization ────────────────────────────────────────
+function encodeState(groups, selThirds, winners) {
+  const g = {};
+  for (const gid of GIDS) {
+    g[gid] = groups[gid].map((t) => INIT_GROUPS[gid].indexOf(t)).join("");
+  }
+  return btoa(JSON.stringify({ g, t: selThirds.join(""), w: winners }));
+}
+
+function decodeState(b64) {
+  try {
+    const s = JSON.parse(atob(b64));
+    const groups = {};
+    for (const gid of GIDS) {
+      groups[gid] = s.g[gid].split("").map((i) => INIT_GROUPS[gid][+i]);
+    }
+    return { groups, selThirds: s.t ? s.t.split("") : [], winners: s.w || {} };
+  } catch {
+    return null;
+  }
+}
+
+const _urlData = new URLSearchParams(window.location.search).get("data");
+const _restored = _urlData ? decodeState(_urlData) : null;
+
 export default function App() {
-  const [groups, setGroups] = useState(INIT_GROUPS);
-  const [selThirds, setSelThirds] = useState([]);
-  const [winners, setWinners] = useState({});
+  const [groups, setGroups] = useState(_restored?.groups || INIT_GROUPS);
+  const [selThirds, setSelThirds] = useState(_restored?.selThirds || []);
+  const [winners, setWinners] = useState(_restored?.winners || {});
   const [tab, setTab] = useState("groups");
 
   const ta = useMemo(() => solveThirds(selThirds), [selThirds]);
@@ -103,6 +128,31 @@ export default function App() {
     setWinners({});
   }, []);
 
+  // ── URL sync: update address bar on every state change ──
+  useEffect(() => {
+    const encoded = encodeState(groups, selThirds, winners);
+    const url = new URL(window.location);
+    url.searchParams.set("data", encoded);
+    window.history.replaceState(null, "", url);
+  }, [groups, selThirds, winners]);
+
+  // ── Share link ──
+  const [copied, setCopied] = useState(false);
+  const handleShare = useCallback(async () => {
+    try {
+      await navigator.clipboard.writeText(window.location.href);
+    } catch {
+      const inp = document.createElement("input");
+      inp.value = window.location.href;
+      document.body.appendChild(inp);
+      inp.select();
+      document.execCommand("copy");
+      document.body.removeChild(inp);
+    }
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  }, []);
+
   const tabBtn = (id, label) => (
     <button
       onClick={() => setTab(id)}
@@ -130,9 +180,26 @@ export default function App() {
               <span className="sm:hidden text-amber-300 font-bold">{totalPicks}/31 Tipps</span>
             </p>
           </div>
-          <div className="ml-auto hidden md:flex items-center gap-3 text-blue-300" style={{ fontSize: 10 }}>
-            <span>48 Teams</span><span>·</span><span>12 Gruppen</span><span>·</span>
-            <span className="text-amber-300 font-bold">{totalPicks}/31 Tipps</span>
+          <div className="ml-auto flex items-center gap-2 sm:gap-3">
+            <div className="hidden md:flex items-center gap-3 text-blue-300" style={{ fontSize: 10 }}>
+              <span>48 Teams</span><span>·</span><span>12 Gruppen</span><span>·</span>
+              <span className="text-amber-300 font-bold">{totalPicks}/31 Tipps</span>
+            </div>
+            <button
+              onClick={handleShare}
+              className="relative px-2.5 py-1 rounded text-xs font-bold text-white transition-colors"
+              style={{ background: "#2563eb", fontFamily: "'Barlow Condensed',sans-serif", fontSize: 11 }}
+            >
+              {copied ? "Kopiert!" : "Link teilen"}
+              {copied && (
+                <span
+                  className="absolute -bottom-7 left-1/2 -translate-x-1/2 px-2 py-0.5 rounded text-white whitespace-nowrap z-50"
+                  style={{ background: "#059669", fontSize: 10 }}
+                >
+                  In Zwischenablage kopiert
+                </span>
+              )}
+            </button>
           </div>
         </div>
         <div className="flex px-5 gap-1" style={{ borderTop: "1px solid rgba(255,255,255,0.08)", background: "#15253d" }}>
