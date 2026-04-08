@@ -11,8 +11,10 @@ Dieses Tool erlaubt es, die komplette WM von der Gruppenphase bis zum Finale dur
 * **Zwei-Tab Layout:** Nahtloser Wechsel zwischen "Gruppen & Analysen" und dem K.o.-"Turnierbaum".
 * **Interaktive Gruppenphase:** Teams können per Drag & Drop (mit optimierter Touch-Unterstützung für Mobile) innerhalb ihrer Gruppen sortiert werden.
 * **Auto-Fill & Simulation:** Automatische Berechnung der Gruppenphase und K.o.-Spiele per Knopfdruck. Jeder Durchlauf generiert einen neuen, einzigartigen Turnierverlauf mit realistischen Überraschungen (Details siehe "Der Simulations-Algorithmus").
+* **Teilbare URLs (Share-Links):** Der gesamte Zustand des Turnierbaums wird in Echtzeit in der URL gespeichert (Base64-kodiertes JSON). Ein Klick auf "Link teilen" genügt, um Vorhersagen ohne Datenbank oder Account zu verschicken.
+* **Live-Countdown:** Ein dynamischer Timer im Header baut Vorfreude auf und zählt live die Tage, Stunden und Minuten bis zum Eröffnungsspiel am 11. Juni 2026 herunter.
 * **Daten & Analysen:** Anzeige von Länder-Marktwerten (inkl. visueller Balken) und der Formkurve der letzten 5 Spiele (Hover/Touch-Effekt).
-* **Beste Drittplatzierte:** Eigener Bereich zur Auswahl der 8 besten Gruppendritten, berechnet durch einen komplexen Solver, der logisch entscheidet, wer in der K.o.-Runde wo platziert wird.
+* **Beste Drittplatzierte:** Eigener Bereich zur Auswahl der 8 besten Gruppendritten, berechnet durch einen komplexen Solver.
 * **Dynamischer K.o.-Baum:** 48-Team-Modus ab dem Sechzehntelfinale. Klicke auf ein Team im Match-Feld, um es manuell eine Runde weiter zu bringen.
 
 ---
@@ -34,9 +36,8 @@ Die integrierte Auto-Fill-Funktion entscheidet Spiele nicht rein nach Favoritenr
 ## 🚀 Roadmap (Geplant)
 
 Folgende Features stehen im Backlog zur Umsetzung:
-* **URL-Serialisierung (Share-Links):** Speicherung des Turnierbaums als Base64-String in der URL zum einfachen Teilen ohne Datenbank.
-* **Head-to-Head (H2H) Modal:** Klick auf Partien öffnet ein Detail-Popup mit Stadion-Hintergrund, Anstoßzeit und Deep-Links (Transfermarkt & Google).
-* **Live-Countdown:** Ein Timer im Header bis zum Eröffnungsspiel am 11. Juni 2026.
+* **Head-to-Head (H2H) Modal:** Klick auf Partien öffnet ein Detail-Popup mit Stadion-Hintergrund, genauer Anstoßzeit und Deep-Links (Transfermarkt & Google Historie).
+* **Bild-Export:** Eine Funktion, um den fertig getippten Turnierbaum als hochauflösendes Bild (.png) für Social Media abzuspeichern.
 
 ---
 
