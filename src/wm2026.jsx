@@ -2,7 +2,7 @@ import { useCallback, useMemo, useState } from "react";
 import GroupTable from "./components/GroupTable";
 import ThirdSel from "./components/ThirdSel";
 import { FullBracket } from "./components/Bracket";
-import { GIDS, INIT_GROUPS } from "./data/constants";
+import { GIDS, INIT_GROUPS, MV } from "./data/constants";
 import { clearDown, solveThirds } from "./utils/helpers";
 
 export default function App() {
@@ -18,6 +18,20 @@ export default function App() {
     (gid) => setSelThirds((p) => (p.includes(gid) ? p.filter((g) => g !== gid) : p.length >= 8 ? p : [...p, gid])),
     [],
   );
+  const handleClearThirds = useCallback(() => {
+    setSelThirds([]);
+  }, []);
+  const handleAutoThirds = useCallback(() => {
+    const topThirds = GIDS.map((g) => {
+      const team = groups[g]?.[2];
+      const score = (MV[team] || 0) ** 2 * (0.5 + Math.random());
+      return { gid: g, score };
+    })
+      .sort((a, b) => b.score - a.score)
+      .slice(0, 8)
+      .map(({ gid }) => gid);
+    setSelThirds(topThirds);
+  }, [groups]);
   const handlePick = useCallback((mid, side) => {
     setWinners((p) => {
       const n = { ...p };
@@ -84,7 +98,13 @@ export default function App() {
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
               {GIDS.map((g) => <GroupTable key={g} gid={g} teams={groups[g]} onReorder={handleReorder} />)}
             </div>
-            <ThirdSel groups={groups} sel={selThirds} onToggle={handleToggle} />
+            <ThirdSel
+              groups={groups}
+              sel={selThirds}
+              onToggle={handleToggle}
+              onAutoFill={handleAutoThirds}
+              onClear={handleClearThirds}
+            />
             <div className="p-3 rounded bg-white border text-slate-500 mt-3" style={{ borderColor: "#d1d9e0", fontSize: 11 }}>
               <strong>Anleitung:</strong> Teams per Drag & Drop (Desktop) oder Long-Press (Mobil) sortieren. Formkurve (letzte 5 Spiele): Hover/Tap auf die Punkte zeigt das Ergebnis.
               8 Drittplatzierte wahlen, dann zum Tab "Turnierbaum" wechseln und auf Teams klicken, um den Sieger zu bestimmen.

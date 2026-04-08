@@ -2,10 +2,12 @@ import { useState } from "react";
 import { FL, GIDS } from "../data/constants";
 import { sn } from "../utils/helpers";
 
-export default function ThirdSel({ groups, sel, onToggle }) {
+export default function ThirdSel({ groups, sel, onToggle, onAutoFill, onClear, language, uiDict }) {
   const [showInfo, setShowInfo] = useState(false);
   const n = sel.length;
   const full = n >= 8;
+  const autoLabel = uiDict?.[language]?.autoFill || "Auto";
+  const clearLabel = uiDict?.[language]?.clear || "Reset";
 
   return (
     <div className="mb-3">
@@ -22,7 +24,23 @@ export default function ThirdSel({ groups, sel, onToggle }) {
             ?
           </button>
         </div>
-        <span className={`font-mono px-1.5 py-0.5 rounded ${n === 8 ? "bg-emerald-500" : "bg-amber-500"}`} style={{ fontSize: 10 }}>{n}/8</span>
+        <div className="flex items-center gap-1">
+          <span className={`font-mono px-1.5 py-0.5 rounded ${n === 8 ? "bg-emerald-500" : "bg-amber-500"}`} style={{ fontSize: 10 }}>{n}/8</span>
+          <button
+            type="button"
+            onClick={onAutoFill}
+            className="text-[10px] px-1.5 py-0.5 rounded bg-white/10 hover:bg-white/20"
+          >
+            {autoLabel}
+          </button>
+          <button
+            type="button"
+            onClick={onClear}
+            className="text-[10px] px-1.5 py-0.5 rounded bg-white/10 hover:bg-white/20"
+          >
+            {clearLabel}
+          </button>
+        </div>
       </div>
       <div className="border border-t-0 rounded-b p-1.5" style={{ borderColor: "#d1d9e0" }}>
         {showInfo && (
