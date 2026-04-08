@@ -3,35 +3,7 @@ import GroupTable from "./components/GroupTable";
 import ThirdSel from "./components/ThirdSel";
 import { FullBracket } from "./components/Bracket";
 import { GIDS, INIT_GROUPS, MV } from "./data/constants";
-import { R32, R16, QF, SF, FIN } from "./data/bracket";
-import { clearDown, solveThirds, getTeam, weightedShuffle, pickWinnerByMV } from "./utils/helpers";
-
-const delay = (ms) => new Promise((r) => setTimeout(r, ms));
-
-// ─── URL state serialization ────────────────────────────────────────
-function encodeState(groups, selThirds, winners) {
-  const g = {};
-  for (const gid of GIDS) {
-    g[gid] = groups[gid].map((t) => INIT_GROUPS[gid].indexOf(t)).join("");
-  }
-  return btoa(JSON.stringify({ g, t: selThirds.join(""), w: winners }));
-}
-
-function decodeState(b64) {
-  try {
-    const s = JSON.parse(atob(b64));
-    const groups = {};
-    for (const gid of GIDS) {
-      groups[gid] = s.g[gid].split("").map((i) => INIT_GROUPS[gid][+i]);
-    }
-    return { groups, selThirds: s.t ? s.t.split("") : [], winners: s.w || {} };
-  } catch {
-    return null;
-  }
-}
-
-const _urlData = new URLSearchParams(window.location.search).get("data");
-const _restored = _urlData ? decodeState(_urlData) : null;
+import { clearDown, solveThirds } from "./utils/helpers";
 
 export default function App() {
   const [groups, setGroups] = useState(_restored?.groups || INIT_GROUPS);
@@ -46,6 +18,20 @@ export default function App() {
     (gid) => setSelThirds((p) => (p.includes(gid) ? p.filter((g) => g !== gid) : p.length >= 8 ? p : [...p, gid])),
     [],
   );
+  const handleClearThirds = useCallback(() => {
+    setSelThirds([]);
+  }, []);
+  const handleAutoThirds = useCallback(() => {
+    const topThirds = GIDS.map((g) => {
+      const team = groups[g]?.[2];
+      const score = (MV[team] || 0) ** 2 * (0.5 + Math.random());
+      return { gid: g, score };
+    })
+      .sort((a, b) => b.score - a.score)
+      .slice(0, 8)
+      .map(({ gid }) => gid);
+    setSelThirds(topThirds);
+  }, [groups]);
   const handlePick = useCallback((mid, side) => {
     setWinners((p) => {
       const n = { ...p };
@@ -273,7 +259,13 @@ export default function App() {
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
               {GIDS.map((g) => <GroupTable key={g} gid={g} teams={groups[g]} onReorder={handleReorder} />)}
             </div>
-            <ThirdSel groups={groups} sel={selThirds} onToggle={handleToggle} />
+            <ThirdSel
+              groups={groups}
+              sel={selThirds}
+              onToggle={handleToggle}
+              onAutoFill={handleAutoThirds}
+              onClear={handleClearThirds}
+            />
             <div className="p-3 rounded bg-white border text-slate-500 mt-3" style={{ borderColor: "#d1d9e0", fontSize: 11 }}>
               <strong>Anleitung:</strong> Teams per Drag & Drop (Desktop) oder Long-Press (Mobil) sortieren. Formkurve (letzte 5 Spiele): Hover/Tap auf die Punkte zeigt das Ergebnis.
               8 Drittplatzierte wahlen, dann zum Tab "Turnierbaum" wechseln und auf Teams klicken, um den Sieger zu bestimmen.

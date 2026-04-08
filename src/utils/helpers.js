@@ -12,8 +12,10 @@ export const fmtMV = (v) => {
 
 export const calcProb = (mvA, mvB) => {
   if (!mvA || !mvB) return { a: 50, b: 50 };
-  const total = mvA + mvB;
-  const pA = Math.round((mvA / total) * 100);
+  const weightedA = mvA ** 2;
+  const weightedB = mvB ** 2;
+  const total = weightedA + weightedB;
+  const pA = Math.round((weightedA / total) * 100);
   return { a: pA, b: 100 - pA };
 };
 
