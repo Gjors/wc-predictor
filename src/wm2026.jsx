@@ -153,6 +153,32 @@ export default function App() {
     setTimeout(() => setCopied(false), 2000);
   }, []);
 
+  // ── Countdown to tournament start ──
+  const WM_START = new Date("2026-06-11T12:00:00").getTime();
+  const [countdown, setCountdown] = useState(() => {
+    const d = WM_START - Date.now();
+    if (d <= 0) return null;
+    return {
+      days: Math.floor(d / 86400000),
+      hours: Math.floor((d % 86400000) / 3600000),
+      minutes: Math.floor((d % 3600000) / 60000),
+    };
+  });
+
+  useEffect(() => {
+    const tick = () => {
+      const d = WM_START - Date.now();
+      if (d <= 0) { setCountdown(null); return; }
+      setCountdown({
+        days: Math.floor(d / 86400000),
+        hours: Math.floor((d % 86400000) / 3600000),
+        minutes: Math.floor((d % 3600000) / 60000),
+      });
+    };
+    const id = setInterval(tick, 60000);
+    return () => clearInterval(id);
+  }, [WM_START]);
+
   const tabBtn = (id, label) => (
     <button
       onClick={() => setTab(id)}
@@ -179,6 +205,15 @@ export default function App() {
               <span className="hidden sm:inline">USA · Mexiko · Kanada &nbsp;|&nbsp; 11. Juni – 19. Juli 2026</span>
               <span className="sm:hidden text-amber-300 font-bold">{totalPicks}/31 Tipps</span>
             </p>
+            {countdown ? (
+              <p className="text-blue-300 font-bold" style={{ fontSize: 10, fontFamily: "'Barlow Condensed',sans-serif" }}>
+                Noch {countdown.days} Tage, {countdown.hours} Std., {countdown.minutes} Min.
+              </p>
+            ) : (
+              <p className="text-emerald-400 font-bold" style={{ fontSize: 10, fontFamily: "'Barlow Condensed',sans-serif" }}>
+                Das Turnier lauft!
+              </p>
+            )}
           </div>
           <div className="ml-auto flex items-center gap-2 sm:gap-3">
             <div className="hidden md:flex items-center gap-3 text-blue-300" style={{ fontSize: 10 }}>

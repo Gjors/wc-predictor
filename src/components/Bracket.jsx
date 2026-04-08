@@ -93,7 +93,7 @@ export function Champ({ groups, ta, winners }) {
 
   return (
     <div
-      className="flex items-center justify-center gap-3 py-2.5 px-3 sm:px-6 mb-4 rounded-lg animate-pulse"
+      className="flex items-center justify-center gap-3 py-2.5 px-3 sm:px-6 mb-4 rounded-lg"
       style={{ background: "linear-gradient(135deg,#1a2d4a,#2a4a6b)", border: "2px solid #c9a84c" }}
     >
       <span className="text-3xl">{FL[champ] || "🏆"}</span>
