@@ -1,17 +1,35 @@
+import { useState } from "react";
 import { FL, GIDS } from "../data/constants";
 import { sn } from "../utils/helpers";
 
 export default function ThirdSel({ groups, sel, onToggle }) {
+  const [showInfo, setShowInfo] = useState(false);
   const n = sel.length;
   const full = n >= 8;
 
   return (
     <div className="mb-3">
       <div className="flex items-center justify-between px-2.5 py-1 rounded-t" style={{ background: "#1a2d4a", color: "#fff" }}>
-        <span className="font-bold text-xs tracking-wide" style={{ fontFamily: "'Barlow Condensed',sans-serif" }}>BESTE DRITTPLATZIERTE</span>
+        <div className="flex items-center gap-1.5">
+          <span className="font-bold text-xs tracking-wide" style={{ fontFamily: "'Barlow Condensed',sans-serif" }}>BESTE DRITTPLATZIERTE</span>
+          <button
+            type="button"
+            onClick={() => setShowInfo((v) => !v)}
+            className="w-4 h-4 rounded-full border border-white/60 text-[10px] font-semibold leading-none flex items-center justify-center hover:bg-white/10"
+            aria-label="Informationen zur Drittplatzierten-Logik anzeigen"
+            aria-expanded={showInfo}
+          >
+            ?
+          </button>
+        </div>
         <span className={`font-mono px-1.5 py-0.5 rounded ${n === 8 ? "bg-emerald-500" : "bg-amber-500"}`} style={{ fontSize: 10 }}>{n}/8</span>
       </div>
       <div className="border border-t-0 rounded-b p-1.5" style={{ borderColor: "#d1d9e0" }}>
+        {showInfo && (
+          <div className="mb-1.5 rounded bg-blue-50 text-blue-800 px-2 py-1.5 text-[11px] leading-snug">
+            In der Realität qualifizieren sich die 8 besten Dritten über Punkte und Tordifferenz. Hier übernimmst du diese Auswahl. Die Platzierung im K.o.-Baum ist danach nicht zufällig, sondern folgt strikt der offiziellen FIFA-Matrix: Teams werden anhand ihres Gruppen-Buchstabens so verteilt, dass im Sechzehntelfinale nie zwei Teams aus derselben Vorrundengruppe aufeinandertreffen.
+          </div>
+        )}
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-1">
           {GIDS.map((g) => {
             const team = groups[g]?.[2];
