@@ -24,7 +24,7 @@ export default function App() {
   const handleAutoThirds = useCallback(() => {
     const topThirds = GIDS.map((g) => {
       const team = groups[g]?.[2];
-      const score = (MV[team] || 0) * (0.5 + Math.random());
+      const score = (MV[team] || 0) ** 2 * (0.5 + Math.random());
       return { gid: g, score };
     })
       .sort((a, b) => b.score - a.score)
