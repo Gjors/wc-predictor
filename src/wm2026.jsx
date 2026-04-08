@@ -2,8 +2,43 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import GroupTable from "./components/GroupTable";
 import ThirdSel from "./components/ThirdSel";
 import { FullBracket } from "./components/Bracket";
+import { FIN, QF, R16, R32, SF } from "./data/bracket";
 import { GIDS, INIT_GROUPS, MV } from "./data/constants";
-import { clearDown, solveThirds } from "./utils/helpers";
+import {
+  clearDown,
+  delay,
+  getTeam,
+  pickWinnerByMV,
+  solveThirds,
+  weightedShuffle,
+} from "./utils/helpers";
+
+const decodeState = (raw) => {
+  if (!raw) return null;
+  try {
+    const decoded = JSON.parse(atob(raw));
+    if (!decoded || typeof decoded !== "object") return null;
+
+    return {
+      groups: decoded.groups && typeof decoded.groups === "object" ? decoded.groups : INIT_GROUPS,
+      selThirds: Array.isArray(decoded.selThirds) ? decoded.selThirds : [],
+      winners: decoded.winners && typeof decoded.winners === "object" ? decoded.winners : {},
+    };
+  } catch {
+    return null;
+  }
+};
+
+const encodeState = (groups, selThirds, winners) => {
+  const payload = { groups, selThirds, winners };
+  return btoa(JSON.stringify(payload));
+};
+
+const _restored = (() => {
+  if (typeof window === "undefined") return null;
+  const data = new URLSearchParams(window.location.search).get("data");
+  return decodeState(data);
+})();
 
 export default function App() {
   const [groups, setGroups] = useState(_restored?.groups || INIT_GROUPS);
