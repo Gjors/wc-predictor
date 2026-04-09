@@ -1,4 +1,4 @@
-import { FL, UI_DICT } from "../data/constants";
+import { ISO_CODES, UI_DICT } from "../data/constants";
 import {
   CC,
   FIN,
@@ -98,7 +98,16 @@ export function Champ({ groups, ta, winners, lang = "de" }) {
       className="flex items-center justify-center gap-3 py-2.5 px-3 sm:px-6 mb-4 rounded-lg"
       style={{ background: "linear-gradient(135deg,#1a2d4a,#2a4a6b)", border: "2px solid #c9a84c" }}
     >
-      <span className="text-3xl">{FL[champ] || "🏆"}</span>
+      {ISO_CODES[champ] ? (
+        <img
+          src={`https://flagcdn.com/w20/${ISO_CODES[champ]}.png`}
+          alt={`${champ} flag`}
+          className="w-8 h-6 object-cover rounded-sm shadow-sm inline-block"
+          loading="lazy"
+        />
+      ) : (
+        <span className="w-8 h-6 rounded bg-gray-300 inline-block" aria-label={`${champ} flag missing`} />
+      )}
       <div className="text-center">
         <div className="text-amber-400 font-bold tracking-widest uppercase" style={{ fontSize: 10 }}>{t.champion}</div>
         <div className="text-white font-bold text-xl" style={{ fontFamily: "'Barlow Condensed',sans-serif" }}>{sn(champ, lang)}</div>

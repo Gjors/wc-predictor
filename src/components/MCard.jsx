@@ -1,4 +1,4 @@
-import { FL, MV } from "../data/constants";
+import { ISO_CODES, MV } from "../data/constants";
 import { calcProb, sn } from "../utils/helpers";
 
 const MH = 42;
@@ -40,7 +40,16 @@ export default function MCard({ matchId, teamA, teamB, labelA, labelB, venue, wi
       >
         {ok ? (
           <>
-            <span className="mr-1 text-sm leading-none">{FL[team] || ""}</span>
+            {ISO_CODES[team] ? (
+              <img
+                src={`https://flagcdn.com/w20/${ISO_CODES[team]}.png`}
+                alt={`${team} flag`}
+                className="mr-1 w-4 h-3 object-cover rounded-sm shadow-sm inline-block flex-shrink-0"
+                loading="lazy"
+              />
+            ) : (
+              <span className="mr-1 w-4 h-3 rounded-sm bg-gray-300 inline-block flex-shrink-0" aria-label={`${team} flag missing`} />
+            )}
             <span className="truncate">{sn(team, lang)}</span>
             {showProb && <span className="ml-auto font-mono flex-shrink-0" style={{ fontSize: 8, color: pct >= 50 ? "#16a34a" : "#94a3b8" }}>{pct}%</span>}
             {isW && !showProb && <span className="ml-auto text-emerald-600" style={{ fontSize: 9 }}>▶</span>}
