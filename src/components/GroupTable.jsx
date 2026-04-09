@@ -131,7 +131,7 @@ export default function GroupTable({
         {isDetailMode ? (
           <div className="text-blue-300 flex items-center justify-end gap-4" style={{ fontSize: 9 }}>
             <span>{t.marketValue}</span>
-            <span className="text-right" style={{ minWidth: 36 }}>{t.pointsShort}</span>
+            <span className="text-right w-12">{t.pointsShort}</span>
           </div>
         ) : (
           <span className="text-blue-300" style={{ fontSize: 9 }}>{t.marketValue}</span>
@@ -207,7 +207,7 @@ export default function GroupTable({
               <span className="font-medium text-slate-800 truncate" style={{ minWidth: 0, maxWidth: 90 }}>{sn(team, lang)}</span>
 
               <div className="flex items-center gap-0.5 mx-1.5 sm:mx-2 flex-shrink-0">
-                {form.map((f, fi) => {
+                {[...form].reverse().map((f, fi) => {
                   const r = f[0];
                   const detail = f.slice(2);
                   return (
@@ -230,8 +230,8 @@ export default function GroupTable({
                 </div>
                 <span className="font-mono text-slate-500 text-right" style={{ fontSize: 9, minWidth: 52 }}>{fmtMV(mv, lang)} €</span>
                 {isDetailMode && (
-                  <span className="font-bold text-slate-700 text-right" style={{ fontSize: 10, minWidth: 36 }}>
-                    {pointsByTeam[team] || 0} {t.pointsShort}
+                  <span className="font-bold text-slate-700 text-right w-12" style={{ fontSize: 10 }}>
+                    {pointsByTeam[team] || 0}
                   </span>
                 )}
               </div>
