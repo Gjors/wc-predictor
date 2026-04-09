@@ -198,7 +198,7 @@ export default function App() {
   const tabBtn = (id, label) => (
     <button
       onClick={() => setTab(id)}
-      className={`px-3 sm:px-5 py-2 text-xs font-bold uppercase tracking-wider transition-colors
+      className={`px-3 sm:px-5 py-2 text-xs font-bold uppercase tracking-wider transition-colors duration-200 cursor-pointer
         ${tab === id ? "text-[#1a2d4a] bg-[#eef1f5] rounded-t" : "text-blue-300 hover:text-white"}`}
       style={{ fontFamily: "'Barlow Condensed',sans-serif", borderBottom: tab === id ? "none" : "2px solid transparent" }}
     >
@@ -238,8 +238,8 @@ export default function App() {
             </div>
             <button
               onClick={handleShare}
-              className="relative px-2.5 py-1 rounded text-xs font-bold text-white transition-colors"
-              style={{ background: "#2563eb", fontFamily: "'Barlow Condensed',sans-serif", fontSize: 11 }}
+              className="relative px-2.5 py-1 rounded text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 transition-colors duration-200 cursor-pointer"
+              style={{ fontFamily: "'Barlow Condensed',sans-serif", fontSize: 11 }}
             >
               {copied ? t.copied : t.share}
               {copied && (
@@ -254,8 +254,8 @@ export default function App() {
             {/* Language toggle */}
             <button
               onClick={() => setLang((l) => (l === "de" ? "en" : "de"))}
-              className="px-2 py-1 rounded text-xs font-bold text-white transition-colors"
-              style={{ background: "#334155", fontFamily: "'Barlow Condensed',sans-serif", fontSize: 11 }}
+              className="px-2 py-1 rounded text-xs font-bold text-white bg-slate-700 hover:bg-slate-600 transition-colors duration-200 cursor-pointer"
+              style={{ fontFamily: "'Barlow Condensed',sans-serif", fontSize: 11 }}
             >
               {lang === "de" ? "🇬🇧 EN" : "🇩🇪 DE"}
             </button>
