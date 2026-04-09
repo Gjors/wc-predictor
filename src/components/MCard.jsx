@@ -5,11 +5,10 @@ const MH = 42;
 const CW = 128;
 
 export default function MCard({ matchId, teamA, teamB, labelA, labelB, venue, winner, onPick, style, isFinal, lang = "de" }) {
-  const probH = 3;
   const h = isFinal ? MH + 10 : MH;
   const headH = isFinal ? 15 : 13;
   const showProb = !!teamA && !!teamB;
-  const rowH = (h - headH - (showProb ? probH : 0)) / 2;
+  const rowH = (h - headH) / 2;
 
   const mvA = teamA ? MV[teamA] : null;
   const mvB = teamB ? MV[teamB] : null;
@@ -89,12 +88,6 @@ export default function MCard({ matchId, teamA, teamB, labelA, labelB, venue, wi
       </div>
       {mkRow(teamA, labelA, "a")}
       {mkRow(teamB, labelB, "b")}
-      {showProb && (
-        <div className="flex" style={{ height: probH }}>
-          <div style={{ width: `${prob.a}%`, background: "#3b82f6", transition: "width 0.3s" }} />
-          <div style={{ width: `${prob.b}%`, background: "#cbd5e1", transition: "width 0.3s" }} />
-        </div>
-      )}
     </div>
   );
 }

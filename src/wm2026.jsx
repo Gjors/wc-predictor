@@ -88,7 +88,13 @@ export default function App() {
   }, []);
   const handlePickMatch = useCallback((gid, matchIndex, pick) => {
     const key = `${gid}-${matchIndex}`;
-    setGroupPicks((prev) => ({ ...prev, [key]: pick }));
+    setGroupPicks((prev) => {
+      const next = { ...prev };
+      const currentPick = prev[key];
+      if (currentPick === pick) delete next[key];
+      else next[key] = pick;
+      return next;
+    });
   }, []);
 
   const totalPicks = Object.keys(winners).length;
