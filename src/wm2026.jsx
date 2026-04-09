@@ -66,6 +66,68 @@ const GROUP_MATCHES = [
   [1, 2],
 ];
 
+const getMatchPickByMV = (teamA, teamB) => {
+  const mvA = MV[teamA] || 1;
+  const mvB = MV[teamB] || 1;
+  const ratioA = mvA / (mvA + mvB);
+  const closeness = 1 - Math.abs(ratioA - 0.5) * 2;
+  const drawWeight = 0.18 + closeness * 0.24;
+  const winWeightA = Math.max(0.1, (1 - drawWeight) * ratioA);
+  const winWeightB = Math.max(0.1, (1 - drawWeight) * (1 - ratioA));
+  const total = winWeightA + drawWeight + winWeightB;
+  const roll = Math.random() * total;
+  if (roll < winWeightA) return "1";
+  if (roll < winWeightA + drawWeight) return "X";
+  return "2";
+};
+
+const calcThirdsFromPicks = (groups, picks) =>
+  GIDS.map((gid) => {
+    const teams = groups[gid] || [];
+    const points = Object.fromEntries(teams.map((team) => [team, 0]));
+    GROUP_MATCHES.forEach(([aIndex, bIndex], matchIndex) => {
+      const teamA = teams[aIndex];
+      const teamB = teams[bIndex];
+      const pick = picks[`${gid}-${matchIndex}`];
+      if (!teamA || !teamB) return;
+      if (pick === "1") points[teamA] += 3;
+      if (pick === "X") {
+        points[teamA] += 1;
+        points[teamB] += 1;
+      }
+      if (pick === "2") points[teamB] += 3;
+    });
+
+    const thirdTeam = [...teams].sort((a, b) => {
+      const byPoints = (points[b] || 0) - (points[a] || 0);
+      if (byPoints !== 0) return byPoints;
+      return (MV[b] || 0) - (MV[a] || 0);
+    })[2];
+
+    return {
+      gid,
+      points: points[thirdTeam] || 0,
+      mv: MV[thirdTeam] || 0,
+    };
+  })
+    .sort((a, b) => {
+      const byPoints = b.points - a.points;
+      if (byPoints !== 0) return byPoints;
+      return b.mv - a.mv;
+    })
+    .slice(0, 8)
+    .map(({ gid }) => gid);
+
+const isDefaultState = (groups, selThirds, winners, isDetailMode, groupPicks) => {
+  const isDefaultGroups = GIDS.every(
+    (gid) =>
+      Array.isArray(groups[gid]) &&
+      groups[gid].length === INIT_GROUPS[gid].length &&
+      groups[gid].every((team, idx) => team === INIT_GROUPS[gid][idx]),
+  );
+  return isDefaultGroups && selThirds.length === 0 && Object.keys(winners).length === 0 && !isDetailMode && Object.keys(groupPicks).length === 0;
+};
+
 export default function App() {
   const [groups, setGroups] = useState(_restored?.groups || INIT_GROUPS);
   const [selThirds, setSelThirds] = useState(_restored?.selThirds || []);
@@ -87,6 +149,10 @@ export default function App() {
     setSelThirds([]);
   }, []);
   const handleAutoThirds = useCallback(() => {
+    if (isDetailMode) {
+      setSelThirds(calcThirdsFromPicks(groups, groupPicks));
+      return;
+    }
     const topThirds = GIDS.map((g) => {
       const team = groups[g]?.[2];
       const score = (MV[team] || 0) ** 2 * (0.5 + Math.random());
@@ -96,7 +162,7 @@ export default function App() {
       .slice(0, 8)
       .map(({ gid }) => gid);
     setSelThirds(topThirds);
-  }, [groups]);
+  }, [groups, groupPicks, isDetailMode]);
   const handlePick = useCallback((mid, side) => {
     setWinners((p) => {
       const n = { ...p };
@@ -136,6 +202,22 @@ export default function App() {
     setSimulating(true);
     setWinners({});
     setSelThirds([]);
+    if (isDetailMode) {
+      const simulatedPicks = {};
+      GIDS.forEach((gid) => {
+        GROUP_MATCHES.forEach(([aIndex, bIndex], matchIndex) => {
+          const teamA = groups[gid]?.[aIndex];
+          const teamB = groups[gid]?.[bIndex];
+          if (!teamA || !teamB) return;
+          simulatedPicks[`${gid}-${matchIndex}`] = getMatchPickByMV(teamA, teamB);
+        });
+      });
+      setGroupPicks(simulatedPicks);
+      setSelThirds(calcThirdsFromPicks(groups, simulatedPicks));
+      setSimulating(false);
+      return;
+    }
+
     setGroupPicks({});
 
     // Pre-compute all simulated group orderings
@@ -160,7 +242,7 @@ export default function App() {
     setSelThirds(thirdScores.slice(0, 8).map((t) => t.g));
 
     setSimulating(false);
-  }, []);
+  }, [groups, isDetailMode]);
 
   const resetGroupsFn = useCallback(() => {
     setGroups(INIT_GROUPS);
@@ -199,8 +281,14 @@ export default function App() {
 
   // ── URL sync: update address bar on every state change ──
   useEffect(() => {
-    const encoded = encodeState(groups, selThirds, winners);
     const url = new URL(window.location);
+    const hasDefaultState = isDefaultState(groups, selThirds, winners, isDetailMode, groupPicks);
+    if (hasDefaultState) {
+      window.history.replaceState(null, "", `${url.pathname}${url.hash || ""}`);
+      return;
+    }
+
+    const encoded = encodeState(groups, selThirds, winners);
     url.searchParams.set("data", encoded);
     if (isDetailMode) url.searchParams.set("dm", "1");
     else url.searchParams.delete("dm");
@@ -342,7 +430,7 @@ export default function App() {
               <button
                 onClick={simulateGroupsFn}
                 disabled={simulating}
-                className="px-3 py-1.5 rounded text-xs font-bold uppercase tracking-wide text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="px-3 py-1.5 rounded text-xs font-bold uppercase tracking-wide text-white cursor-pointer transition-colors duration-200 hover:brightness-110 disabled:opacity-50 disabled:cursor-not-allowed"
                 style={{ background: simulating ? "#64748b" : "#059669", fontFamily: "'Barlow Condensed',sans-serif" }}
               >
                 {simulating ? t.simulating : t.simGroups}
@@ -350,14 +438,14 @@ export default function App() {
               <button
                 onClick={resetGroupsFn}
                 disabled={simulating}
-                className="px-3 py-1.5 rounded text-xs font-bold uppercase tracking-wide text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="px-3 py-1.5 rounded text-xs font-bold uppercase tracking-wide text-white cursor-pointer transition-colors duration-200 hover:brightness-110 disabled:opacity-50 disabled:cursor-not-allowed"
                 style={{ background: "#64748b", fontFamily: "'Barlow Condensed',sans-serif" }}
               >
                 {t.reset}
               </button>
               <button
                 onClick={handleToggleDetailMode}
-                className="px-3 py-1.5 rounded text-xs font-bold uppercase tracking-wide text-white transition-colors"
+                className="px-3 py-1.5 rounded text-xs font-bold uppercase tracking-wide text-white cursor-pointer transition-colors duration-200 hover:brightness-110"
                 style={{ background: isDetailMode ? "#0f766e" : "#475569", fontFamily: "'Barlow Condensed',sans-serif" }}
               >
                 {isDetailMode ? t.detailModeOn : t.detailModeOff}
