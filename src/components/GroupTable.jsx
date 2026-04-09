@@ -131,7 +131,14 @@ export default function GroupTable({
     <div className="mb-3">
       <div className="px-3 py-1.5 rounded-t flex items-center justify-between" style={{ background: "#1a2d4a", color: "#fff" }}>
         <span className="font-bold text-xs tracking-wide" style={{ fontFamily: "'Barlow Condensed',sans-serif" }}>{t.group} {gid}</span>
-        <span className="text-blue-300" style={{ fontSize: 9 }}>{t.marketValue}</span>
+        {isDetailMode ? (
+          <div className="text-blue-300 flex items-center justify-end gap-4" style={{ fontSize: 9 }}>
+            <span>{t.marketValue}</span>
+            <span className="text-right" style={{ minWidth: 36 }}>{t.pointsShort}</span>
+          </div>
+        ) : (
+          <span className="text-blue-300" style={{ fontSize: 9 }}>{t.marketValue}</span>
+        )}
       </div>
       <div
         ref={containerRef}
