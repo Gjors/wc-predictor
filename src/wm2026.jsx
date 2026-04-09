@@ -33,12 +33,23 @@ const _restored = (() => {
   return decodeState(data);
 })();
 
+const GROUP_MATCHES = [
+  [0, 1],
+  [2, 3],
+  [0, 2],
+  [3, 1],
+  [3, 0],
+  [1, 2],
+];
+
 export default function App() {
   const [groups, setGroups] = useState(_restored?.groups || INIT_GROUPS);
   const [selThirds, setSelThirds] = useState(_restored?.selThirds || []);
   const [winners, setWinners] = useState(_restored?.winners || {});
   const [tab, setTab] = useState("groups");
   const [lang, setLang] = useState("de");
+  const [isDetailMode, setIsDetailMode] = useState(false);
+  const [groupPicks, setGroupPicks] = useState({});
   const t = UI_DICT[lang];
 
   const ta = useMemo(() => solveThirds(selThirds), [selThirds]);
@@ -75,6 +86,10 @@ export default function App() {
       return n;
     });
   }, []);
+  const handlePickMatch = useCallback((gid, matchIndex, pick) => {
+    const key = `${gid}-${matchIndex}`;
+    setGroupPicks((prev) => ({ ...prev, [key]: pick }));
+  }, []);
 
   const totalPicks = Object.keys(winners).length;
   const [simulating, setSimulating] = useState(false);
@@ -85,6 +100,7 @@ export default function App() {
     setSimulating(true);
     setWinners({});
     setSelThirds([]);
+    setGroupPicks({});
 
     // Pre-compute all simulated group orderings
     const simGroups = {};
@@ -114,6 +130,7 @@ export default function App() {
     setGroups(INIT_GROUPS);
     setSelThirds([]);
     setWinners({});
+    setGroupPicks({});
   }, []);
 
   // ── Simulate bracket (weighted random by MV, round by round) ──
@@ -293,9 +310,28 @@ export default function App() {
               >
                 {t.reset}
               </button>
+              <button
+                onClick={() => setIsDetailMode((prev) => !prev)}
+                className="px-3 py-1.5 rounded text-xs font-bold uppercase tracking-wide text-white transition-colors"
+                style={{ background: isDetailMode ? "#0f766e" : "#475569", fontFamily: "'Barlow Condensed',sans-serif" }}
+              >
+                {isDetailMode ? t.detailModeOn : t.detailModeOff}
+              </button>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
-              {GIDS.map((g) => <GroupTable key={g} gid={g} teams={groups[g]} onReorder={handleReorder} lang={lang} />)}
+              {GIDS.map((g) => (
+                <GroupTable
+                  key={g}
+                  gid={g}
+                  teams={groups[g]}
+                  onReorder={handleReorder}
+                  lang={lang}
+                  isDetailMode={isDetailMode}
+                  groupPicks={groupPicks}
+                  onPickMatch={handlePickMatch}
+                  groupMatches={GROUP_MATCHES}
+                />
+              ))}
             </div>
             <ThirdSel
               groups={groups}

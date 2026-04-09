@@ -1,16 +1,26 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { FORM, ISO_CODES, MV, UI_DICT } from "../data/constants";
 import { fmtMV, sn } from "../utils/helpers";
 
 export const RC = ["bg-emerald-600 text-white", "bg-sky-600 text-white", "bg-amber-500 text-white", "bg-slate-400 text-white"];
 export const FC = { S: "bg-emerald-500", U: "bg-gray-400", N: "bg-red-500" };
 
-export default function GroupTable({ gid, teams, onReorder, lang = "de" }) {
+export default function GroupTable({
+  gid,
+  teams,
+  onReorder,
+  lang = "de",
+  isDetailMode = false,
+  groupPicks = {},
+  onPickMatch,
+  groupMatches = [],
+}) {
   const t = UI_DICT[lang];
   const drag = useRef(null);
   const over = useRef(null);
 
   const onEnd = () => {
+    if (isDetailMode) return;
     if (drag.current === null || over.current === null || drag.current === over.current) return;
     const t = [...teams];
     const d = t.splice(drag.current, 1)[0];
@@ -26,6 +36,7 @@ export default function GroupTable({ gid, teams, onReorder, lang = "de" }) {
   propsRef.current = { teams, gid, onReorder };
 
   useEffect(() => {
+    if (isDetailMode) return undefined;
     const el = containerRef.current;
     if (!el) return;
     let sy = 0;
@@ -86,9 +97,35 @@ export default function GroupTable({ gid, teams, onReorder, lang = "de" }) {
       el.removeEventListener("touchend", onTE);
       el.removeEventListener("touchcancel", onTE);
     };
-  }, []);
+  }, [isDetailMode]);
 
-  const maxMV = Math.max(...teams.map((t) => MV[t] || 0));
+  const pointsByTeam = useMemo(() => {
+    const points = Object.fromEntries(teams.map((team) => [team, 0]));
+    groupMatches.forEach(([aIndex, bIndex], matchIndex) => {
+      const teamA = teams[aIndex];
+      const teamB = teams[bIndex];
+      if (!teamA || !teamB) return;
+      const pick = groupPicks[`${gid}-${matchIndex}`];
+      if (pick === "1") points[teamA] += 3;
+      if (pick === "X") {
+        points[teamA] += 1;
+        points[teamB] += 1;
+      }
+      if (pick === "2") points[teamB] += 3;
+    });
+    return points;
+  }, [gid, groupMatches, groupPicks, teams]);
+
+  const viewTeams = useMemo(() => {
+    if (!isDetailMode) return teams;
+    return [...teams].sort((a, b) => {
+      const byPoints = (pointsByTeam[b] || 0) - (pointsByTeam[a] || 0);
+      if (byPoints !== 0) return byPoints;
+      return (MV[b] || 0) - (MV[a] || 0);
+    });
+  }, [isDetailMode, pointsByTeam, teams]);
+
+  const maxMV = Math.max(...viewTeams.map((t) => MV[t] || 0));
 
   return (
     <div className="mb-3">
@@ -96,8 +133,12 @@ export default function GroupTable({ gid, teams, onReorder, lang = "de" }) {
         <span className="font-bold text-xs tracking-wide" style={{ fontFamily: "'Barlow Condensed',sans-serif" }}>{t.group} {gid}</span>
         <span className="text-blue-300" style={{ fontSize: 9 }}>{t.marketValue}</span>
       </div>
-      <div ref={containerRef} className="border border-t-0 rounded-b" style={{ borderColor: "#d1d9e0", WebkitTouchCallout: "none" }}>
-        {teams.map((team, i) => {
+      <div
+        ref={containerRef}
+        className="border border-t-0 rounded-b"
+        style={{ borderColor: "#d1d9e0", WebkitTouchCallout: "none", pointerEvents: isDetailMode ? "none" : "auto" }}
+      >
+        {viewTeams.map((team, i) => {
           const form = FORM[team] || [];
           const mv = MV[team] || 0;
           const isDragged = td && td.from === i;
@@ -125,7 +166,7 @@ export default function GroupTable({ gid, teams, onReorder, lang = "de" }) {
             <div
               key={team}
               data-ri={i}
-              draggable
+              draggable={!isDetailMode}
               onDragStart={() => {
                 drag.current = i;
               }}
@@ -134,7 +175,7 @@ export default function GroupTable({ gid, teams, onReorder, lang = "de" }) {
               }}
               onDragEnd={onEnd}
               onDragOver={(e) => e.preventDefault()}
-              className={`flex items-center px-2 py-1.5 text-xs cursor-grab active:cursor-grabbing select-none hover:bg-blue-50 ${i < 3 ? "border-b" : ""}`}
+              className={`flex items-center px-2 py-1.5 text-xs select-none ${isDetailMode ? "" : "cursor-grab active:cursor-grabbing hover:bg-blue-50"} ${i < 3 ? "border-b" : ""}`}
               style={{
                 borderColor: "#e8ecf0",
                 background: bg,
@@ -184,11 +225,55 @@ export default function GroupTable({ gid, teams, onReorder, lang = "de" }) {
                   <div className="h-full rounded-full" style={{ width: `${maxMV ? (mv / maxMV) * 100 : 0}%`, background: mv >= 500 ? "#16a34a" : mv >= 200 ? "#2563eb" : mv >= 100 ? "#d97706" : "#94a3b8" }} />
                 </div>
                 <span className="font-mono text-slate-500 text-right" style={{ fontSize: 9, minWidth: 52 }}>{fmtMV(mv, lang)} €</span>
+                {isDetailMode && (
+                  <span className="font-bold text-slate-700 text-right" style={{ fontSize: 10, minWidth: 36 }}>
+                    {pointsByTeam[team] || 0} {t.pointsShort}
+                  </span>
+                )}
               </div>
             </div>
           );
         })}
       </div>
+      {isDetailMode && (
+        <div className="mt-2 rounded border bg-white px-2 py-2" style={{ borderColor: "#d1d9e0" }}>
+          <div className="space-y-1.5">
+            {groupMatches.map(([aIndex, bIndex], matchIndex) => {
+              const teamA = teams[aIndex];
+              const teamB = teams[bIndex];
+              const pick = groupPicks[`${gid}-${matchIndex}`];
+              return (
+                <div key={`${gid}-match-${matchIndex}`} className="rounded border px-2 py-1.5" style={{ borderColor: "#e8ecf0" }}>
+                  <div className="text-slate-400 mb-1" style={{ fontSize: 10 }}>{t.matchday} {matchIndex + 1}</div>
+                  <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-1">
+                    <span className="truncate text-slate-700 text-right" style={{ fontSize: 11 }}>{sn(teamA, lang)}</span>
+                    <div className="flex items-center gap-1">
+                      {["1", "X", "2"].map((option) => {
+                        const active = pick === option;
+                        return (
+                          <button
+                            key={option}
+                            onClick={() => onPickMatch?.(gid, matchIndex, option)}
+                            className="w-6 h-6 rounded text-[10px] font-bold border transition-colors cursor-pointer"
+                            style={{
+                              borderColor: active ? "#2563eb" : "#cbd5e1",
+                              background: active ? "#2563eb" : "#fff",
+                              color: active ? "#fff" : "#334155",
+                            }}
+                          >
+                            {option}
+                          </button>
+                        );
+                      })}
+                    </div>
+                    <span className="truncate text-slate-700" style={{ fontSize: 11 }}>{sn(teamB, lang)}</span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
