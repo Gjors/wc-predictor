@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { FL, GIDS, UI_DICT } from "../data/constants";
+import { GIDS, ISO_CODES, UI_DICT } from "../data/constants";
 import { sn } from "../utils/helpers";
 
 export default function ThirdSel({ groups, sel, onToggle, onAutoFill, onClear, lang = "de" }) {
@@ -64,7 +64,17 @@ export default function ThirdSel({ groups, sel, onToggle, onAutoFill, onClear, l
               >
                 <span className={`w-3.5 h-3.5 rounded border flex items-center justify-center flex-shrink-0
                 ${on ? "bg-emerald-500 border-emerald-500 text-white" : "border-gray-300"}`} style={{ fontSize: 8 }}>{on ? "✓" : ""}</span>
-                <span>{FL[team] || ""}</span><span className="truncate">{sn(team, lang)}</span>
+                {ISO_CODES[team] ? (
+                  <img
+                    src={`https://flagcdn.com/w20/${ISO_CODES[team]}.png`}
+                    alt={`${team} flag`}
+                    className="w-4 h-3 object-cover rounded-sm shadow-sm inline-block flex-shrink-0"
+                    loading="lazy"
+                  />
+                ) : (
+                  <span className="w-4 h-3 rounded-sm bg-gray-300 inline-block flex-shrink-0" aria-label={`${team} flag missing`} />
+                )}
+                <span className="truncate">{sn(team, lang)}</span>
                 <span className="text-gray-400 ml-auto">({g})</span>
               </button>
             );

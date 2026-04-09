@@ -1,16 +1,16 @@
-export const FL = {
-  "Mexiko":"🇲🇽","Südafrika":"🇿🇦","Republik Korea":"🇰🇷","Tschechien":"🇨🇿",
-  "Kanada":"🇨🇦","Bosnien-Herzegowina":"🇧🇦","Katar":"🇶🇦","Schweiz":"🇨🇭",
-  "Brasilien":"🇧🇷","Marokko":"🇲🇦","Haiti":"🇭🇹","Schottland":"🏴",
-  "USA":"🇺🇸","Paraguay":"🇵🇾","Australien":"🇦🇺","Türkei":"🇹🇷",
-  "Deutschland":"🇩🇪","Curaçao":"🇨🇼","Elfenbeinküste":"🇨🇮","Ecuador":"🇪🇨",
-  "Niederlande":"🇳🇱","Japan":"🇯🇵","Schweden":"🇸🇪","Tunesien":"🇹🇳",
-  "Belgien":"🇧🇪","Ägypten":"🇪🇬","IR Iran":"🇮🇷","Neuseeland":"🇳🇿",
-  "Spanien":"🇪🇸","Kap Verde":"🇨🇻","Saudi-Arabien":"🇸🇦","Uruguay":"🇺🇾",
-  "Frankreich":"🇫🇷","Senegal":"🇸🇳","Irak":"🇮🇶","Norwegen":"🇳🇴",
-  "Argentinien":"🇦🇷","Algerien":"🇩🇿","Österreich":"🇦🇹","Jordanien":"🇯🇴",
-  "Portugal":"🇵🇹","DR Kongo":"🇨🇩","Usbekistan":"🇺🇿","Kolumbien":"🇨🇴",
-  "England":"🏴","Kroatien":"🇭🇷","Ghana":"🇬🇭","Panama":"🇵🇦",
+export const ISO_CODES = {
+  "Mexiko":"mx","Südafrika":"za","Republik Korea":"kr","Tschechien":"cz",
+  "Kanada":"ca","Bosnien-Herzegowina":"ba","Katar":"qa","Schweiz":"ch",
+  "Brasilien":"br","Marokko":"ma","Haiti":"ht","Schottland":"gb-sct",
+  "USA":"us","Paraguay":"py","Australien":"au","Türkei":"tr",
+  "Deutschland":"de","Curaçao":"cw","Elfenbeinküste":"ci","Ecuador":"ec",
+  "Niederlande":"nl","Japan":"jp","Schweden":"se","Tunesien":"tn",
+  "Belgien":"be","Ägypten":"eg","IR Iran":"ir","Neuseeland":"nz",
+  "Spanien":"es","Kap Verde":"cv","Saudi-Arabien":"sa","Uruguay":"uy",
+  "Frankreich":"fr","Senegal":"sn","Irak":"iq","Norwegen":"no",
+  "Argentinien":"ar","Algerien":"dz","Österreich":"at","Jordanien":"jo",
+  "Portugal":"pt","DR Kongo":"cd","Usbekistan":"uz","Kolumbien":"co",
+  "England":"gb-eng","Kroatien":"hr","Ghana":"gh","Panama":"pa",
 };
 
 export const SH = {

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { FL, FORM, MV, UI_DICT } from "../data/constants";
+import { FORM, ISO_CODES, MV, UI_DICT } from "../data/constants";
 import { fmtMV, sn } from "../utils/helpers";
 
 export const RC = ["bg-emerald-600 text-white", "bg-sky-600 text-white", "bg-amber-500 text-white", "bg-slate-400 text-white"];
@@ -149,7 +149,16 @@ export default function GroupTable({ gid, teams, onReorder, lang = "de" }) {
             >
               <span className="text-slate-300 mr-1 hidden sm:inline" style={{ fontSize: 10 }}>⠿</span>
               <span className={`inline-flex items-center justify-center w-5 h-4 rounded font-bold mr-1.5 flex-shrink-0 ${RC[i]}`} style={{ fontSize: 10 }}>{i + 1}</span>
-              <span className="mr-1 text-sm leading-none">{FL[team] || "🏳️"}</span>
+              {ISO_CODES[team] ? (
+                <img
+                  src={`https://flagcdn.com/w20/${ISO_CODES[team]}.png`}
+                  alt={`${team} flag`}
+                  className="mr-1 w-4 h-3 object-cover rounded-sm shadow-sm inline-block"
+                  loading="lazy"
+                />
+              ) : (
+                <span className="mr-1 w-4 h-3 rounded-sm bg-gray-300 inline-block" aria-label={`${team} flag missing`} />
+              )}
               <span className="font-medium text-slate-800 truncate" style={{ minWidth: 0, maxWidth: 90 }}>{sn(team, lang)}</span>
 
               <div className="flex items-center gap-0.5 mx-1.5 sm:mx-2 flex-shrink-0">
