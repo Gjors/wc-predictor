@@ -2,8 +2,8 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { FORM, ISO_CODES, MV, UI_DICT } from "../data/constants";
 import { fmtMV, sn } from "../utils/helpers";
 
-export const RC = ["bg-emerald-600 text-white", "bg-sky-600 text-white", "bg-amber-500 text-white", "bg-slate-400 text-white"];
-export const FC = { S: "bg-emerald-500", U: "bg-gray-400", N: "bg-red-500" };
+const RC = ["bg-emerald-600 text-white", "bg-sky-600 text-white", "bg-amber-500 text-white", "bg-slate-400 text-white"];
+const FC = { S: "bg-emerald-500", U: "bg-gray-400", N: "bg-red-500" };
 
 export default function GroupTable({
   gid,
@@ -32,8 +32,6 @@ export default function GroupTable({
 
   const containerRef = useRef(null);
   const [td, setTd] = useState(null);
-  const propsRef = useRef({ teams, gid, onReorder });
-  propsRef.current = { teams, gid, onReorder };
 
   useEffect(() => {
     if (isDetailMode) return undefined;
@@ -75,11 +73,10 @@ export default function GroupTable({
     const onTE = () => {
       clearTimeout(tmr);
       if (act && cur && cur.from !== cur.to) {
-        const { teams: currentTeams, gid: currentGid, onReorder: currentOnReorder } = propsRef.current;
-        const t = [...currentTeams];
+        const t = [...teams];
         const d = t.splice(cur.from, 1)[0];
         t.splice(cur.to, 0, d);
-        currentOnReorder(currentGid, t);
+        onReorder(gid, t);
       }
       act = false;
       cur = null;
@@ -97,7 +94,7 @@ export default function GroupTable({
       el.removeEventListener("touchend", onTE);
       el.removeEventListener("touchcancel", onTE);
     };
-  }, [isDetailMode]);
+  }, [gid, isDetailMode, onReorder, teams]);
 
   const pointsByTeam = useMemo(() => {
     const points = Object.fromEntries(teams.map((team) => [team, 0]));
