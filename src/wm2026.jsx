@@ -27,10 +27,34 @@ const encodeState = (groups, selThirds, winners) => {
   return btoa(JSON.stringify(payload));
 };
 
+const GROUP_PICK_KEYS = Array.from("ABCDEFGHIJKL").flatMap((gid) => Array.from({ length: 6 }, (_, idx) => `${gid}-${idx}`));
+
+const encodePicks = (picksObject) =>
+  GROUP_PICK_KEYS.map((key) => {
+    const pick = picksObject?.[key];
+    return pick === "1" || pick === "X" || pick === "2" ? pick : "-";
+  }).join("");
+
+const decodePicks = (picksString) => {
+  if (!picksString) return {};
+  return GROUP_PICK_KEYS.reduce((acc, key, idx) => {
+    const pick = picksString[idx];
+    if (pick === "1" || pick === "X" || pick === "2") acc[key] = pick;
+    return acc;
+  }, {});
+};
+
 const _restored = (() => {
   if (typeof window === "undefined") return null;
-  const data = new URLSearchParams(window.location.search).get("data");
-  return decodeState(data);
+  const params = new URLSearchParams(window.location.search);
+  const data = params.get("data");
+  const restoredState = decodeState(data) || {};
+
+  return {
+    ...restoredState,
+    isDetailMode: params.get("dm") === "1",
+    groupPicks: decodePicks(params.get("p")),
+  };
 })();
 
 const GROUP_MATCHES = [
@@ -48,8 +72,8 @@ export default function App() {
   const [winners, setWinners] = useState(_restored?.winners || {});
   const [tab, setTab] = useState("groups");
   const [lang, setLang] = useState("de");
-  const [isDetailMode, setIsDetailMode] = useState(false);
-  const [groupPicks, setGroupPicks] = useState({});
+  const [isDetailMode, setIsDetailMode] = useState(_restored?.isDetailMode || false);
+  const [groupPicks, setGroupPicks] = useState(_restored?.groupPicks || {});
   const t = UI_DICT[lang];
 
   const ta = useMemo(() => solveThirds(selThirds), [selThirds]);
@@ -94,6 +118,12 @@ export default function App() {
       if (currentPick === pick) delete next[key];
       else next[key] = pick;
       return next;
+    });
+  }, []);
+  const handleToggleDetailMode = useCallback(() => {
+    setIsDetailMode((prev) => {
+      if (prev) setGroupPicks({});
+      return !prev;
     });
   }, []);
 
@@ -172,8 +202,17 @@ export default function App() {
     const encoded = encodeState(groups, selThirds, winners);
     const url = new URL(window.location);
     url.searchParams.set("data", encoded);
+    if (isDetailMode) url.searchParams.set("dm", "1");
+    else url.searchParams.delete("dm");
+
+    const encodedPicks = encodePicks(groupPicks);
+    if (encodedPicks.includes("1") || encodedPicks.includes("X") || encodedPicks.includes("2")) {
+      url.searchParams.set("p", encodedPicks);
+    } else {
+      url.searchParams.delete("p");
+    }
     window.history.replaceState(null, "", url);
-  }, [groups, selThirds, winners]);
+  }, [groups, selThirds, winners, isDetailMode, groupPicks]);
 
   // ── Share link ──
   const [copied, setCopied] = useState(false);
@@ -317,7 +356,7 @@ export default function App() {
                 {t.reset}
               </button>
               <button
-                onClick={() => setIsDetailMode((prev) => !prev)}
+                onClick={handleToggleDetailMode}
                 className="px-3 py-1.5 rounded text-xs font-bold uppercase tracking-wide text-white transition-colors"
                 style={{ background: isDetailMode ? "#0f766e" : "#475569", fontFamily: "'Barlow Condensed',sans-serif" }}
               >
