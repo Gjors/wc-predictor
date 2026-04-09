@@ -23,7 +23,7 @@ export default function MCard({ matchId, teamA, teamB, labelA, labelB, venue, wi
     return (
       <div
         onClick={() => ok && onPick(matchId, side)}
-        className={`flex items-center px-1.5 truncate transition-all
+        className={`flex items-center px-1.5 transition-all
           ${ok ? "cursor-pointer" : ""}
           ${ok && !isW && !isL ? "hover:bg-blue-50" : ""}
           ${isL ? "opacity-35" : ""}`}
@@ -54,7 +54,7 @@ export default function MCard({ matchId, teamA, teamB, labelA, labelB, venue, wi
             {isW && !showProb && <span className="ml-auto text-emerald-600" style={{ fontSize: 9 }}>▶</span>}
           </>
         ) : (
-          <span className="truncate">{label}</span>
+          <span className="block truncate leading-normal py-[1px]">{label}</span>
         )}
       </div>
     );
