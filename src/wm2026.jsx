@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import GroupTable from "./components/GroupTable";
 import ThirdSel from "./components/ThirdSel";
 import { FullBracket } from "./components/Bracket";
+import { BracketVertical, BracketTabs, BracketPath } from "./components/BracketVariants";
 import { GIDS, INIT_GROUPS, MV, UI_DICT } from "./data/constants";
 import { R32, R16, QF, SF, FIN } from "./data/bracket";
 import { clearDown, delay, solveThirds, getTeam, weightedShuffle, pickWinnerByMV } from "./utils/helpers";
@@ -79,6 +80,8 @@ export default function App() {
   const totalPicks = Object.keys(winners).length;
   const [simulating, setSimulating] = useState(false);
   const groupsReady = selThirds.length === 8;
+  // Mobile bracket variant selector (Ticket-05 test): classic|vertical|tabs|path
+  const [bracketVariant, setBracketVariant] = useState("classic");
 
   // ── Simulate groups (weighted random by MV) ──
   const simulateGroupsFn = useCallback(async () => {
@@ -340,8 +343,50 @@ export default function App() {
                 </span>
               )}
             </div>
-            <p className="text-xs text-slate-400 mb-2 sm:hidden">{t.swipeHint}</p>
-            <FullBracket groups={groups} ta={ta} winners={winners} onPick={handlePick} lang={lang} />
+            <div className="flex flex-wrap items-center gap-1 mb-2">
+              <span
+                className="text-slate-500 mr-1 uppercase tracking-wider font-bold"
+                style={{ fontSize: 9, fontFamily: "'Barlow Condensed',sans-serif" }}
+              >
+                {t.bracketVariant}:
+              </span>
+              {[
+                { key: "classic", label: t.variantClassic },
+                { key: "vertical", label: t.variantVertical },
+                { key: "tabs", label: t.variantTabs },
+                { key: "path", label: t.variantPath },
+              ].map((v) => {
+                const on = bracketVariant === v.key;
+                return (
+                  <button
+                    key={v.key}
+                    type="button"
+                    onClick={() => setBracketVariant(v.key)}
+                    className="px-2 py-1 rounded font-bold uppercase tracking-wider transition-colors"
+                    style={{
+                      background: on ? "#2563eb" : "#e8ecf0",
+                      color: on ? "#fff" : "#475569",
+                      fontSize: 10,
+                      fontFamily: "'Barlow Condensed',sans-serif",
+                    }}
+                  >
+                    {v.label}
+                  </button>
+                );
+              })}
+            </div>
+            {bracketVariant === "classic" && (
+              <p className="text-xs text-slate-400 mb-2 sm:hidden">{t.swipeHint}</p>
+            )}
+            {bracketVariant === "classic" ? (
+              <FullBracket groups={groups} ta={ta} winners={winners} onPick={handlePick} lang={lang} />
+            ) : bracketVariant === "vertical" ? (
+              <BracketVertical groups={groups} ta={ta} winners={winners} onPick={handlePick} lang={lang} />
+            ) : bracketVariant === "tabs" ? (
+              <BracketTabs groups={groups} ta={ta} winners={winners} onPick={handlePick} lang={lang} />
+            ) : (
+              <BracketPath groups={groups} ta={ta} winners={winners} onPick={handlePick} lang={lang} />
+            )}
           </div>
         )}
       </div>
