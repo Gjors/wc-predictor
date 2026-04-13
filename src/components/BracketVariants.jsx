@@ -1,7 +1,36 @@
 import { useState } from "react";
-import { FL, MV, UI_DICT } from "../data/constants";
+import { ISO_CODES, MV, UI_DICT } from "../data/constants";
 import { R32, R16, QF, SF, FIN, MI } from "../data/bracket";
 import { getTeam, r32Team, slotLabel, calcProb, sn } from "../utils/helpers";
+
+// ─── ISO 2-letter code → flag emoji (for <option> labels only) ───────
+function flagEmoji(team) {
+  const code = ISO_CODES[team];
+  if (!code || code.length !== 2) return "";
+  const A = 0x1f1e6;
+  const a = "a".charCodeAt(0);
+  return String.fromCodePoint(A + code.charCodeAt(0) - a, A + code.charCodeAt(1) - a);
+}
+
+// ─── Flag img helper (ISO_CODES → flagcdn) ───────────────────────────
+function Flag({ team, size = "sm" }) {
+  const code = ISO_CODES[team];
+  const cls =
+    size === "lg"
+      ? "w-8 h-6 object-cover rounded-sm shadow-sm inline-block flex-shrink-0"
+      : "mr-1.5 w-4 h-3 object-cover rounded-sm shadow-sm inline-block flex-shrink-0";
+  if (code) {
+    return (
+      <img
+        src={`https://flagcdn.com/w20/${code}.png`}
+        alt={`${team} flag`}
+        className={cls}
+        loading="lazy"
+      />
+    );
+  }
+  return <span className={cls.replace("object-cover", "") + " bg-gray-300"} aria-hidden="true" />;
+}
 
 // ─── Shared flow-layout match card (replaces absolute-positioned MCard) ─
 function FlowCard({ matchId, groups, ta, winners, onPick, lang, isFinal }) {
@@ -39,7 +68,7 @@ function FlowCard({ matchId, groups, ta, winners, onPick, lang, isFinal }) {
       >
         {ok ? (
           <>
-            <span className="mr-1.5 text-base leading-none">{FL[team] || ""}</span>
+            <Flag team={team} />
             <span className="truncate flex-1" style={{ fontSize: 12 }}>{sn(team, lang)}</span>
             {showProb && (
               <span
@@ -96,7 +125,7 @@ function ChampBanner({ groups, ta, winners, lang }) {
       className="flex items-center justify-center gap-3 py-2.5 px-3 mb-3 rounded-lg"
       style={{ background: "linear-gradient(135deg,#1a2d4a,#2a4a6b)", border: "2px solid #c9a84c" }}
     >
-      <span className="text-2xl">{FL[champ] || "🏆"}</span>
+      <Flag team={champ} size="lg" />
       <div className="text-center">
         <div className="text-amber-400 font-bold tracking-widest uppercase" style={{ fontSize: 10 }}>
           {t.champion}
@@ -285,7 +314,7 @@ export function BracketPath({ groups, ta, winners, onPick, lang = "de" }) {
           {teams.length === 0 && <option value="">—</option>}
           {teams.map((tm) => (
             <option key={tm} value={tm}>
-              {FL[tm] || ""} {sn(tm, lang)}
+              {flagEmoji(tm)} {sn(tm, lang)}
             </option>
           ))}
         </select>
