@@ -4,6 +4,7 @@ import ThirdSel from "./components/ThirdSel";
 import { FullBracket } from "./components/Bracket";
 import { BracketVertical, BracketTabs, BracketPath } from "./components/BracketVariants";
 import KnockoutArena from "./components/arena/KnockoutArena";
+import PathDifficultyTierList from "./components/PathDifficultyTierList";
 import { GIDS, INIT_GROUPS, UI_DICT } from "./data/constants";
 import { R32, R16, QF, SF, FIN } from "./data/bracket";
 import {
@@ -490,6 +491,7 @@ export default function App() {
         <div className="flex px-5 gap-1" style={{ borderTop: "1px solid rgba(255,255,255,0.08)", background: "#15253d" }}>
           {tabBtn("groups", t.tabGroups)}
           {tabBtn("bracket", t.tabBracket)}
+          {tabBtn("tierList", t.tabTierList)}
         </div>
       </header>
 
@@ -554,6 +556,8 @@ export default function App() {
               <strong>{t.instructionsLabel}</strong> {t.instructions}
             </div>
           </div>
+        ) : tab === "tierList" ? (
+          <PathDifficultyTierList lang={lang} />
         ) : (
           <div className="p-2 sm:p-4 overflow-x-auto">
             <h2
