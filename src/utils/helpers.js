@@ -1,4 +1,5 @@
 import { SH, SH_EN, MV, EN_TEAMS } from "../data/constants";
+import { polyStrength, POLY_GROUP_WINNER } from "../data/polymarket";
 import { FIN, MI, R16, SF, TS, QF, isR32id } from "../data/bracket";
 
 /** Display name: short name if available, optionally translated to English */
@@ -21,13 +22,45 @@ export const fmtMV = (v, lang = "de") => {
   return `${lang === "de" ? fmt.replace(".", ",") : fmt} ${mn}`;
 };
 
-export const calcProb = (mvA, mvB) => {
-  if (!mvA || !mvB) return { a: 50, b: 50 };
-  const weightedA = mvA ** 2;
-  const weightedB = mvB ** 2;
-  const total = weightedA + weightedB;
-  const pA = Math.round((weightedA / total) * 100);
+// ─── Probability model ──────────────────────────────────────────────
+// The app supports two probability models selectable at runtime via the
+// ModelContext:
+//   "poly" — cube root of Polymarket championship odds (default)
+//   "mv"   — squared Transfermarkt market values (legacy)
+// teamStrength() returns a single scalar that calcProb/pickWinner/
+// simulateGroupsFn/handleAutoThirds all consume.
+export const teamStrength = (team, mode = "poly") => {
+  if (!team) return 0;
+  if (mode === "mv") {
+    const mv = MV[team] || 0;
+    return mv * mv;
+  }
+  return polyStrength(team);
+};
+
+// Match win probability derived from team strengths (Bradley-Terry style).
+// Signature note: the legacy calcProb used to accept raw market values. It
+// now takes the two team names directly so it can read whichever model is
+// active. Returns integer percentages that always sum to 100.
+export const calcProb = (teamA, teamB, mode = "poly") => {
+  if (!teamA || !teamB) return { a: 50, b: 50 };
+  const sA = teamStrength(teamA, mode);
+  const sB = teamStrength(teamB, mode);
+  const total = sA + sB;
+  if (total <= 0) return { a: 50, b: 50 };
+  const pA = Math.round((sA / total) * 100);
   return { a: pA, b: 100 - pA };
+};
+
+// Weight used by simulateGroupsFn to order teams 1st→4th within a group.
+// In "poly" mode the first pick (= group winner) is drawn directly from the
+// Polymarket group-winner market; later picks fall back to the championship-
+// derived strength so the ranking stays sensible.
+export const groupWeight = (team, mode = "poly") => {
+  if (mode === "mv") return MV[team] || 1;
+  const gw = POLY_GROUP_WINNER[team];
+  if (gw && gw > 0) return gw;
+  return polyStrength(team) || 0.1;
 };
 
 export function solveThirds(sel) {
@@ -120,9 +153,9 @@ export function weightedShuffle(items, weightFn) {
   return result;
 }
 
-/** Pick match winner ('a' or 'b') based on market value weighted probability */
-export function pickWinnerByMV(teamA, teamB) {
-  const mvA = MV[teamA] || 1;
-  const mvB = MV[teamB] || 1;
-  return Math.random() < mvA / (mvA + mvB) ? "a" : "b";
+/** Pick match winner ('a' or 'b') using the active probability model. */
+export function pickWinner(teamA, teamB, mode = "poly") {
+  const sA = teamStrength(teamA, mode) || 0.0001;
+  const sB = teamStrength(teamB, mode) || 0.0001;
+  return Math.random() < sA / (sA + sB) ? "a" : "b";
 }
