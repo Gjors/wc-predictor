@@ -3,6 +3,7 @@ import GroupTable from "./components/GroupTable";
 import ThirdSel from "./components/ThirdSel";
 import { FullBracket } from "./components/Bracket";
 import { BracketVertical, BracketTabs, BracketPath } from "./components/BracketVariants";
+import KnockoutArena from "./components/arena/KnockoutArena";
 import { GIDS, INIT_GROUPS, MV, UI_DICT } from "./data/constants";
 import { R32, R16, QF, SF, FIN } from "./data/bracket";
 import { clearDown, delay, solveThirds, getTeam, weightedShuffle, pickWinnerByMV } from "./utils/helpers";
@@ -524,6 +525,7 @@ export default function App() {
                 { key: "vertical", label: t.variantVertical },
                 { key: "tabs", label: t.variantTabs },
                 { key: "path", label: t.variantPath },
+                { key: "arena", label: t.variantArena },
               ].map((v) => {
                 const on = bracketVariant === v.key;
                 return (
@@ -553,8 +555,10 @@ export default function App() {
               <BracketVertical groups={groups} ta={ta} winners={winners} onPick={handlePick} lang={lang} />
             ) : bracketVariant === "tabs" ? (
               <BracketTabs groups={groups} ta={ta} winners={winners} onPick={handlePick} lang={lang} />
-            ) : (
+            ) : bracketVariant === "path" ? (
               <BracketPath groups={groups} ta={ta} winners={winners} onPick={handlePick} lang={lang} />
+            ) : (
+              <KnockoutArena groups={groups} ta={ta} winners={winners} onPick={handlePick} lang={lang} />
             )}
           </div>
         )}
