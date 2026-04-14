@@ -1,18 +1,18 @@
-import { ISO_CODES, MV } from "../data/constants";
+import { ISO_CODES } from "../data/constants";
 import { calcProb, sn } from "../utils/helpers";
+import { useModel } from "../utils/model";
 
 const MH = 42;
 const CW = 128;
 
 export default function MCard({ matchId, teamA, teamB, labelA, labelB, venue, winner, onPick, style, isFinal, lang = "de" }) {
+  const mode = useModel();
   const h = isFinal ? MH + 10 : MH;
   const headH = isFinal ? 15 : 13;
   const showProb = !!teamA && !!teamB;
   const rowH = (h - headH) / 2;
 
-  const mvA = teamA ? MV[teamA] : null;
-  const mvB = teamB ? MV[teamB] : null;
-  const prob = calcProb(mvA, mvB);
+  const prob = calcProb(teamA, teamB, mode);
 
   const mkRow = (team, label, side) => {
     const isW = winner === side;

@@ -1,7 +1,9 @@
 import { useState } from "react";
-import { ISO_CODES, MV, UI_DICT } from "../data/constants";
+import { ISO_CODES, UI_DICT } from "../data/constants";
+import { POLY_WINNER } from "../data/polymarket";
 import { R32, R16, QF, SF, FIN, MI } from "../data/bracket";
 import { getTeam, r32Team, slotLabel, calcProb, sn } from "../utils/helpers";
+import { useModel } from "../utils/model";
 
 // ─── ISO 2-letter code → flag emoji (for <option> labels only) ───────
 function flagEmoji(team) {
@@ -34,15 +36,14 @@ function Flag({ team, size = "sm" }) {
 
 // ─── Shared flow-layout match card (replaces absolute-positioned MCard) ─
 function FlowCard({ matchId, groups, ta, winners, onPick, lang, isFinal }) {
+  const mode = useModel();
   const teamA = getTeam(matchId, "a", groups, ta, winners);
   const teamB = getTeam(matchId, "b", groups, ta, winners);
   const labelA = slotLabel(matchId, "a");
   const labelB = slotLabel(matchId, "b");
   const winner = winners[matchId];
   const venue = MI[matchId]?.v || "";
-  const mvA = teamA ? MV[teamA] : null;
-  const mvB = teamB ? MV[teamB] : null;
-  const prob = calcProb(mvA, mvB);
+  const prob = calcProb(teamA, teamB, mode);
   const showProb = !!teamA && !!teamB;
 
   const row = (team, label, side) => {
@@ -287,9 +288,11 @@ export function BracketPath({ groups, ta, winners, onPick, lang = "de" }) {
     if (a) teamSet.add(a);
     if (b) teamSet.add(b);
   }
-  const teams = [...teamSet].sort((a, b) => (MV[b] || 0) - (MV[a] || 0));
+  // Sort team dropdown by Polymarket championship odds so the most likely
+  // champion sits at the top — matches the "Polymarket first" model.
+  const teams = [...teamSet].sort((a, b) => (POLY_WINNER[b] || 0) - (POLY_WINNER[a] || 0));
   const [pickedRaw, setPickedRaw] = useState(null);
-  // Derived selection: fall back to the highest-MV team if the user's pick is
+  // Derived selection: fall back to the strongest team if the user's pick is
   // no longer in the tournament (e.g. because groups/thirds changed).
   const picked = pickedRaw && teamSet.has(pickedRaw) ? pickedRaw : teams[0] || null;
   const path = computePath(picked, groups, ta);

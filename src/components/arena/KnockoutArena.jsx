@@ -6,7 +6,7 @@ import BracketZoomView from "./BracketZoomView";
 import { R32, R16, QF, SF, FIN } from "../../data/bracket";
 import { UI_DICT } from "../../data/constants";
 import { calcProb, getTeam } from "../../utils/helpers";
-import { MV } from "../../data/constants";
+import { useModel } from "../../utils/model";
 
 const ROUND_CONFIG = [
   { key: "r32", labelEn: "Round of 32", labelDe: "Sechzehntelfinale", matches: R32 },
@@ -29,6 +29,7 @@ const roundLabel = (round, lang) => (lang === "de" ? round.labelDe : round.label
 
 export default function KnockoutArena({ groups, ta, winners, onPick, lang = "en", marketProbabilities = {} }) {
   const t = UI_DICT[lang];
+  const mode = useModel();
   const [viewMode, setViewMode] = useState("arena");
 
   const rounds = useMemo(
@@ -53,7 +54,9 @@ export default function KnockoutArena({ groups, ta, winners, onPick, lang = "en"
 
   const { teamA, teamB } = resolveTeams(currentMatch.id);
   const liveProbabilities = marketProbabilities[currentMatch.id] || {};
-  const fallbackProbabilities = calcProb(MV[teamA], MV[teamB]);
+  // Fallback match probabilities derived from the active model (poly/mv)
+  // via the shared calcProb helper.
+  const fallbackProbabilities = calcProb(teamA, teamB, mode);
   const probabilityA = liveProbabilities.a ?? fallbackProbabilities.a;
   const probabilityB = liveProbabilities.b ?? fallbackProbabilities.b;
 

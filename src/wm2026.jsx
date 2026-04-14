@@ -4,9 +4,22 @@ import ThirdSel from "./components/ThirdSel";
 import { FullBracket } from "./components/Bracket";
 import { BracketVertical, BracketTabs, BracketPath } from "./components/BracketVariants";
 import KnockoutArena from "./components/arena/KnockoutArena";
-import { GIDS, INIT_GROUPS, MV, UI_DICT } from "./data/constants";
+import { GIDS, INIT_GROUPS, UI_DICT } from "./data/constants";
 import { R32, R16, QF, SF, FIN } from "./data/bracket";
-import { clearDown, delay, solveThirds, getTeam, weightedShuffle, pickWinnerByMV } from "./utils/helpers";
+import {
+  clearDown,
+  delay,
+  solveThirds,
+  getTeam,
+  weightedShuffle,
+  pickWinner,
+  groupWeight,
+  teamStrength,
+} from "./utils/helpers";
+import { POLY_SPECIALS } from "./data/polymarket";
+import { ModelContext } from "./utils/model";
+
+const PROB_MODE_STORAGE_KEY = "wc-predictor-prob-mode";
 
 const decodeState = (raw) => {
   if (!raw) return null;
@@ -68,10 +81,13 @@ const GROUP_MATCHES = [
   [1, 2],
 ];
 
-const getMatchPickByMV = (teamA, teamB) => {
-  const mvA = MV[teamA] || 1;
-  const mvB = MV[teamB] || 1;
-  const ratioA = mvA / (mvA + mvB);
+// Detail-mode group simulator: turns a pair of team strengths into a
+// 1/X/2 pick with a closeness-dependent draw rate. Uses teamStrength() so
+// it automatically follows the active probability model (poly or mv).
+const getMatchPick = (teamA, teamB, mode) => {
+  const sA = teamStrength(teamA, mode) || 0.0001;
+  const sB = teamStrength(teamB, mode) || 0.0001;
+  const ratioA = sA / (sA + sB);
   const closeness = 1 - Math.abs(ratioA - 0.5) * 2;
   const drawWeight = 0.18 + closeness * 0.24;
   const winWeightA = Math.max(0.1, (1 - drawWeight) * ratioA);
@@ -83,7 +99,10 @@ const getMatchPickByMV = (teamA, teamB) => {
   return "2";
 };
 
-const calcThirdsFromPicks = (groups, picks) =>
+// Detail-mode third-place ranking: collects points from the user's 1/X/2
+// picks, then uses the active model's teamStrength as a tiebreaker and
+// for the final cross-group ordering.
+const calcThirdsFromPicks = (groups, picks, mode) =>
   GIDS.map((gid) => {
     const teams = groups[gid] || [];
     const points = Object.fromEntries(teams.map((team) => [team, 0]));
@@ -103,19 +122,19 @@ const calcThirdsFromPicks = (groups, picks) =>
     const thirdTeam = [...teams].sort((a, b) => {
       const byPoints = (points[b] || 0) - (points[a] || 0);
       if (byPoints !== 0) return byPoints;
-      return (MV[b] || 0) - (MV[a] || 0);
+      return teamStrength(b, mode) - teamStrength(a, mode);
     })[2];
 
     return {
       gid,
       points: points[thirdTeam] || 0,
-      mv: MV[thirdTeam] || 0,
+      strength: teamStrength(thirdTeam, mode),
     };
   })
     .sort((a, b) => {
       const byPoints = b.points - a.points;
       if (byPoints !== 0) return byPoints;
-      return b.mv - a.mv;
+      return b.strength - a.strength;
     })
     .slice(0, 8)
     .map(({ gid }) => gid);
@@ -150,21 +169,41 @@ export default function App() {
   const handleClearThirds = useCallback(() => {
     setSelThirds([]);
   }, []);
+  // Probability model for simulations, match probabilities, etc.
+  // Persisted in localStorage so the user's choice survives reloads.
+  const [probMode, setProbMode] = useState(() => {
+    if (typeof window === "undefined") return "poly";
+    try {
+      const saved = window.localStorage.getItem(PROB_MODE_STORAGE_KEY);
+      return saved === "mv" || saved === "poly" ? saved : "poly";
+    } catch {
+      return "poly";
+    }
+  });
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    try {
+      window.localStorage.setItem(PROB_MODE_STORAGE_KEY, probMode);
+    } catch {
+      // localStorage unavailable (e.g. private mode) — silently ignore.
+    }
+  }, [probMode]);
+
   const handleAutoThirds = useCallback(() => {
     if (isDetailMode) {
-      setSelThirds(calcThirdsFromPicks(groups, groupPicks));
+      setSelThirds(calcThirdsFromPicks(groups, groupPicks, probMode));
       return;
     }
     const topThirds = GIDS.map((g) => {
       const team = groups[g]?.[2];
-      const score = (MV[team] || 0) ** 2 * (0.5 + Math.random());
+      const score = teamStrength(team, probMode) * (0.5 + Math.random());
       return { gid: g, score };
     })
       .sort((a, b) => b.score - a.score)
       .slice(0, 8)
       .map(({ gid }) => gid);
     setSelThirds(topThirds);
-  }, [groups, groupPicks, isDetailMode]);
+  }, [groups, groupPicks, isDetailMode, probMode]);
   const handlePick = useCallback((mid, side) => {
     setWinners((p) => {
       const n = { ...p };
@@ -201,7 +240,7 @@ export default function App() {
   // Mobile bracket variant selector (Ticket-05 test): classic|vertical|tabs|path
   const [bracketVariant, setBracketVariant] = useState("classic");
 
-  // ── Simulate groups (weighted random by MV) ──
+  // ── Simulate groups (weighted random via active probability model) ──
   const simulateGroupsFn = useCallback(async () => {
     setSimulating(true);
     setWinners({});
@@ -213,11 +252,11 @@ export default function App() {
           const teamA = groups[gid]?.[aIndex];
           const teamB = groups[gid]?.[bIndex];
           if (!teamA || !teamB) return;
-          simulatedPicks[`${gid}-${matchIndex}`] = getMatchPickByMV(teamA, teamB);
+          simulatedPicks[`${gid}-${matchIndex}`] = getMatchPick(teamA, teamB, probMode);
         });
       });
       setGroupPicks(simulatedPicks);
-      setSelThirds(calcThirdsFromPicks(groups, simulatedPicks));
+      setSelThirds(calcThirdsFromPicks(groups, simulatedPicks, probMode));
       setSimulating(false);
       return;
     }
@@ -227,7 +266,7 @@ export default function App() {
     // Pre-compute all simulated group orderings
     const simGroups = {};
     for (const gid of GIDS) {
-      simGroups[gid] = weightedShuffle(INIT_GROUPS[gid], (t) => MV[t] || 1);
+      simGroups[gid] = weightedShuffle(INIT_GROUPS[gid], (team) => groupWeight(team, probMode));
     }
 
     // Animate one group at a time
@@ -240,13 +279,13 @@ export default function App() {
     await delay(200);
     const thirdScores = GIDS.map((g) => ({
       g,
-      score: (MV[simGroups[g][2]] || 1) * (0.5 + Math.random()),
+      score: teamStrength(simGroups[g][2], probMode) * (0.5 + Math.random()),
     }));
     thirdScores.sort((a, b) => b.score - a.score);
     setSelThirds(thirdScores.slice(0, 8).map((t) => t.g));
 
     setSimulating(false);
-  }, [groups, isDetailMode]);
+  }, [groups, isDetailMode, probMode]);
 
   const resetGroupsFn = useCallback(() => {
     setGroups(INIT_GROUPS);
@@ -255,7 +294,7 @@ export default function App() {
     setGroupPicks({});
   }, []);
 
-  // ── Simulate bracket (weighted random by MV, round by round) ──
+  // ── Simulate bracket (weighted random via active model, round by round) ──
   const simulateBracketFn = useCallback(async () => {
     setSimulating(true);
     setWinners({});
@@ -270,14 +309,14 @@ export default function App() {
       const teamA = getTeam(match.id, "a", curGroups, curTa, newW);
       const teamB = getTeam(match.id, "b", curGroups, curTa, newW);
       if (teamA && teamB) {
-        newW[match.id] = pickWinnerByMV(teamA, teamB);
+        newW[match.id] = pickWinner(teamA, teamB, probMode);
         await delay(60);
         setWinners({ ...newW });
       }
     }
 
     setSimulating(false);
-  }, [groups, ta]);
+  }, [groups, ta, probMode]);
 
   const resetBracketFn = useCallback(() => {
     setWinners({});
@@ -349,6 +388,22 @@ export default function App() {
     return () => clearInterval(id);
   }, [WM_START]);
 
+  // ── Neymar trivia (Polymarket special): show a dismissible quiz hint
+  // whenever there's a pending Brazil match in the knockout bracket. The
+  // user's dismissal is session-local (no persistence) so reloading the
+  // app gives them the trivia again. ──
+  const [neymarSeen, setNeymarSeen] = useState(false);
+  const brazilPending = useMemo(() => {
+    for (const match of [...R32, ...R16, ...QF, ...SF, FIN]) {
+      if (winners[match.id]) continue;
+      const a = getTeam(match.id, "a", groups, ta, winners);
+      const b = getTeam(match.id, "b", groups, ta, winners);
+      if (a === "Brasilien" || b === "Brasilien") return true;
+    }
+    return false;
+  }, [groups, ta, winners]);
+  const showNeymarTrivia = tab === "bracket" && brazilPending && !neymarSeen;
+
   const tabBtn = (id, label) => (
     <button
       onClick={() => setTab(id)}
@@ -361,6 +416,7 @@ export default function App() {
   );
 
   return (
+    <ModelContext.Provider value={probMode}>
     <div className="flex flex-col h-screen" style={{ background: "#eef1f5", fontFamily: "'Barlow','Barlow Condensed',system-ui,sans-serif" }}>
       <link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&family=Barlow+Condensed:wght@500;600;700&display=swap" rel="stylesheet" />
 
@@ -404,6 +460,22 @@ export default function App() {
                   {t.copiedTooltip}
                 </span>
               )}
+            </button>
+            {/* Model toggle (Polymarket ⇄ Market Value) */}
+            <button
+              type="button"
+              onClick={() => setProbMode((m) => (m === "poly" ? "mv" : "poly"))}
+              title={t.modelToggleTooltip}
+              aria-label={t.modelToggleTooltip}
+              className="px-2 py-1 rounded text-xs font-bold text-white transition-colors duration-200 cursor-pointer hover:brightness-110"
+              style={{
+                background: probMode === "poly" ? "#c9a84c" : "#475569",
+                fontFamily: "'Barlow Condensed',sans-serif",
+                fontSize: 11,
+                letterSpacing: "0.08em",
+              }}
+            >
+              {probMode === "poly" ? t.modelBadgePoly : t.modelBadgeMV}
             </button>
             {/* Language toggle */}
             <button
@@ -490,6 +562,43 @@ export default function App() {
             >
               {t.bracketHeading}
             </h2>
+            {showNeymarTrivia && (
+              <div
+                className="mb-3 p-3 rounded flex items-start gap-3"
+                style={{
+                  background: "linear-gradient(135deg,#fefce8,#fff7ed)",
+                  border: "1px solid #c9a84c",
+                  boxShadow: "0 2px 10px rgba(201,168,76,0.25)",
+                }}
+              >
+                <span className="text-xl leading-none" aria-hidden="true">💡</span>
+                <div className="flex-1 min-w-0">
+                  <div
+                    className="font-bold uppercase tracking-wider mb-0.5"
+                    style={{ color: "#c9a84c", fontSize: 9, fontFamily: "'Barlow Condensed',sans-serif" }}
+                  >
+                    {t.triviaBadge} · {POLY_SPECIALS.neymarPlays}%
+                  </div>
+                  <div
+                    className="font-bold"
+                    style={{ color: "#1a2d4a", fontSize: 13, fontFamily: "'Barlow Condensed',sans-serif" }}
+                  >
+                    {t.triviaNeymarTitle}
+                  </div>
+                  <div style={{ fontSize: 11, color: "#475569", lineHeight: 1.35 }}>
+                    {t.triviaNeymarBody}
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setNeymarSeen(true)}
+                  className="px-2 py-1 rounded text-xs font-bold text-white cursor-pointer hover:brightness-110 flex-shrink-0"
+                  style={{ background: "#1a2d4a", fontFamily: "'Barlow Condensed',sans-serif", fontSize: 10 }}
+                >
+                  {t.triviaDismiss}
+                </button>
+              </div>
+            )}
             <div className="flex flex-wrap items-center gap-2 mb-2">
               <button
                 onClick={simulateBracketFn}
@@ -564,5 +673,6 @@ export default function App() {
         )}
       </div>
     </div>
+    </ModelContext.Provider>
   );
 }
