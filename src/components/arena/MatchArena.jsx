@@ -5,6 +5,7 @@ export default function MatchArena({
   match,
   teamA,
   teamB,
+  teamMeta = {},
   winner,
   onPick,
   lang = "en",
@@ -12,9 +13,19 @@ export default function MatchArena({
 }) {
   const matchupKey = `${match.id}-${teamA || "pending"}-${teamB || "pending"}`;
 
+  const renderFormBadge = (result, index) => {
+    const baseClass = "inline-flex h-6 w-6 items-center justify-center rounded-full border text-[10px] font-black";
+    if (result === "W") return <span key={index} className={`${baseClass} border-emerald-300/60 bg-emerald-400/20 text-emerald-100`}>W</span>;
+    if (result === "D") return <span key={index} className={`${baseClass} border-amber-300/60 bg-amber-400/20 text-amber-100`}>D</span>;
+    if (result === "L") return <span key={index} className={`${baseClass} border-rose-300/60 bg-rose-500/25 text-rose-100`}>L</span>;
+    return <span key={index} className={`${baseClass} border-slate-500 bg-slate-700/50 text-slate-200`}>?</span>;
+  };
+
   const renderTeamCard = (team, side) => {
     const selected = winner === side;
     const defeated = winner && winner !== side;
+    const teamInfo = teamMeta[side] || {};
+    const form = teamInfo.form || ["?", "?", "?", "?"];
 
     return (
       <Motion.button
@@ -40,7 +51,23 @@ export default function MatchArena({
         }}
       >
         <div className="mb-2 text-xs uppercase tracking-[0.15em] text-slate-300">{side === "a" ? "Home side" : "Away side"}</div>
-        <div className="text-2xl font-black tracking-wide text-white md:text-3xl">{team ? sn(team, lang) : "TBD"}</div>
+        <div className="flex items-center gap-3">
+          {teamInfo.flagUrl ? (
+            <img
+              src={teamInfo.flagUrl}
+              alt={`${team} flag`}
+              className="h-8 w-12 rounded-md border border-white/25 object-cover shadow-[0_0_20px_rgba(34,211,238,0.25)]"
+              loading="lazy"
+            />
+          ) : (
+            <span className="inline-block h-8 w-12 rounded-md border border-white/20 bg-slate-700/70" aria-label={`${team || "Team"} flag missing`} />
+          )}
+          <div className="text-2xl font-black tracking-wide text-white md:text-3xl">{team ? sn(team, lang) : "TBD"}</div>
+        </div>
+        <div className="mt-3">
+          <div className="mb-1 text-[10px] uppercase tracking-[0.16em] text-cyan-200/90">Recent form</div>
+          <div className="flex items-center gap-1.5">{form.map((item, index) => renderFormBadge(item, index))}</div>
+        </div>
         {selected && <div className="mt-3 text-xs font-bold uppercase tracking-[0.2em] text-emerald-300">Winner locked</div>}
       </Motion.button>
     );
