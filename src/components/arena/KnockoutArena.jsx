@@ -3,8 +3,9 @@ import { AnimatePresence } from "framer-motion";
 import MatchArena from "./MatchArena";
 import StatOverlay from "./StatOverlay";
 import BracketZoomView from "./BracketZoomView";
+import BracketMiniMap from "./BracketMiniMap";
 import { R32, R16, QF, SF, FIN } from "../../data/bracket";
-import { UI_DICT } from "../../data/constants";
+import { FORM, ISO_CODES, UI_DICT } from "../../data/constants";
 import { calcProb, getTeam } from "../../utils/helpers";
 import { useModel } from "../../utils/model";
 
@@ -26,6 +27,7 @@ const PLAYER_SPOTLIGHTS = {
 };
 
 const roundLabel = (round, lang) => (lang === "de" ? round.labelDe : round.labelEn);
+const FORM_TO_RESULT = { S: "W", U: "D", N: "L", W: "W", D: "D", L: "L" };
 
 export default function KnockoutArena({ groups, ta, winners, onPick, lang = "en", marketProbabilities = {} }) {
   const t = UI_DICT[lang];
@@ -46,13 +48,33 @@ export default function KnockoutArena({ groups, ta, winners, onPick, lang = "en"
   const activeRoundIndex = currentRoundIndex === -1 ? rounds.length - 1 : currentRoundIndex;
   const activeRound = rounds[activeRoundIndex];
   const currentMatch = activeRound.matches.find((match) => !winners[match.id]) || activeRound.matches[activeRound.matches.length - 1];
+  const nextMatch = allMatches.find((match) => match.a === currentMatch.id || match.b === currentMatch.id);
 
   const resolveTeams = (matchId) => ({
     teamA: getTeam(matchId, "a", groups, ta, winners),
     teamB: getTeam(matchId, "b", groups, ta, winners),
   });
 
+  const getFlagUrl = (team) => {
+    const isoCode = ISO_CODES[team];
+    return isoCode ? `https://flagcdn.com/w80/${isoCode}.png` : null;
+  };
+
+  const getRecentForm = (team) => {
+    const fallback = ["?", "?", "?", "?", "?"];
+    if (!team || !FORM[team]) return fallback;
+    const recentGames = FORM[team].slice(0, 5);
+    return recentGames.map((line) => {
+      const prefix = line.trim().charAt(0);
+      return FORM_TO_RESULT[prefix] || "?";
+    });
+  };
+
   const { teamA, teamB } = resolveTeams(currentMatch.id);
+  const teamMeta = {
+    a: { flagUrl: getFlagUrl(teamA), form: getRecentForm(teamA) },
+    b: { flagUrl: getFlagUrl(teamB), form: getRecentForm(teamB) },
+  };
   const liveProbabilities = marketProbabilities[currentMatch.id] || {};
   // Fallback match probabilities derived from the active model (poly/mv)
   // via the shared calcProb helper.
@@ -99,23 +121,35 @@ export default function KnockoutArena({ groups, ta, winners, onPick, lang = "en"
 
       <AnimatePresence mode="wait">
         {viewMode === "arena" ? (
-          <div key="arena" className="grid gap-4 lg:grid-cols-[2fr_1fr] lg:items-start">
-            <MatchArena
-              match={currentMatch}
-              teamA={teamA}
-              teamB={teamB}
-              winner={winners[currentMatch.id]}
-              onPick={handlePick}
+          <div key="arena" className="space-y-4">
+            <BracketMiniMap
+              rounds={rounds}
+              winners={winners}
+              resolveTeams={resolveTeams}
+              currentMatchId={currentMatch.id}
+              nextMatchId={nextMatch?.id}
+              activeRoundKey={activeRound.key}
               lang={lang}
             />
-            <StatOverlay
-              teamA={teamA || "Team A"}
-              teamB={teamB || "Team B"}
-              probabilityA={probabilityA}
-              probabilityB={probabilityB}
-              hint="Momentum pulse: pressing efficiency and recent chance creation can swing this tie."
-              players={mergedPlayers}
-            />
+            <div className="grid gap-4 lg:grid-cols-[2fr_1fr] lg:items-start">
+              <MatchArena
+                match={currentMatch}
+                teamA={teamA}
+                teamB={teamB}
+                teamMeta={teamMeta}
+                winner={winners[currentMatch.id]}
+                onPick={handlePick}
+                lang={lang}
+              />
+              <StatOverlay
+                teamA={teamA || "Team A"}
+                teamB={teamB || "Team B"}
+                probabilityA={probabilityA}
+                probabilityB={probabilityB}
+                hint="Momentum pulse: pressing efficiency and recent chance creation can swing this tie."
+                players={mergedPlayers}
+              />
+            </div>
           </div>
         ) : (
           <BracketZoomView
