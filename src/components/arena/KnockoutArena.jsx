@@ -1,7 +1,6 @@
 import { useMemo, useState } from "react";
 import { AnimatePresence } from "framer-motion";
-import MatchArena from "./MatchArena";
-import StatOverlay from "./StatOverlay";
+import MatchHeadToHead from "./MatchHeadToHead";
 import BracketZoomView from "./BracketZoomView";
 import BracketMiniMap from "./BracketMiniMap";
 import { R32, R16, QF, SF, FIN } from "../../data/bracket";
@@ -99,25 +98,25 @@ export default function KnockoutArena({ groups, ta, winners, onPick, lang = "en"
   const progress = allMatches.filter((match) => winners[match.id]).length;
 
   return (
-    <div className="rounded-3xl border border-cyan-300/30 bg-[radial-gradient(circle_at_top,rgba(12,74,110,0.45),rgba(2,6,23,0.96))] p-4 sm:p-6">
+    <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-6">
       <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
         <div>
-          <p className="text-xs uppercase tracking-[0.2em] text-cyan-300">Game mode</p>
-          <h2 className="text-2xl font-black uppercase tracking-[0.08em] text-white">Knockout Arena</h2>
+          <p className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">Game mode</p>
+          <h2 className="text-2xl font-bold text-slate-900">Knockout Arena</h2>
         </div>
         <button
           type="button"
           onClick={() => setViewMode((prev) => (prev === "arena" ? "zoom" : "arena"))}
-          className="rounded-full border border-cyan-300/50 px-4 py-2 text-xs font-bold uppercase tracking-wider text-cyan-100 hover:bg-cyan-300/10"
+          className="rounded-full border border-slate-300 px-4 py-2 text-xs font-semibold uppercase tracking-[0.08em] text-slate-700 hover:bg-slate-100"
         >
           {viewMode === "arena" ? "Show bracket zoom" : "Back to arena"}
         </button>
       </div>
 
-      <div className="mb-4 h-2 overflow-hidden rounded-full bg-slate-800">
-        <div className="h-full bg-gradient-to-r from-cyan-400 via-emerald-400 to-lime-300 transition-[width] duration-500" style={{ width: `${Math.round((progress / allMatches.length) * 100)}%` }} />
+      <div className="mb-4 h-2 overflow-hidden rounded-full bg-slate-200">
+        <div className="h-full bg-emerald-500 transition-[width] duration-500" style={{ width: `${Math.round((progress / allMatches.length) * 100)}%` }} />
       </div>
-      <p className="mb-6 text-xs text-slate-300">{progress}/{allMatches.length} {t.picks}</p>
+      <p className="mb-6 text-xs text-slate-500">{progress}/{allMatches.length} {t.picks}</p>
 
       <AnimatePresence mode="wait">
         {viewMode === "arena" ? (
@@ -131,25 +130,19 @@ export default function KnockoutArena({ groups, ta, winners, onPick, lang = "en"
               activeRoundKey={activeRound.key}
               lang={lang}
             />
-            <div className="grid gap-4 lg:grid-cols-[2fr_1fr] lg:items-start">
-              <MatchArena
-                match={currentMatch}
-                teamA={teamA}
-                teamB={teamB}
-                teamMeta={teamMeta}
-                winner={winners[currentMatch.id]}
-                onPick={handlePick}
-                lang={lang}
-              />
-              <StatOverlay
-                teamA={teamA || "Team A"}
-                teamB={teamB || "Team B"}
-                probabilityA={probabilityA}
-                probabilityB={probabilityB}
-                hint="Momentum pulse: pressing efficiency and recent chance creation can swing this tie."
-                players={mergedPlayers}
-              />
-            </div>
+            <MatchHeadToHead
+              match={currentMatch}
+              teamA={teamA}
+              teamB={teamB}
+              teamMeta={teamMeta}
+              winner={winners[currentMatch.id]}
+              onPick={handlePick}
+              lang={lang}
+              probabilityA={probabilityA}
+              probabilityB={probabilityB}
+              hint="Current edge based on pricing momentum, recent shot volume, and transition efficiency."
+              players={mergedPlayers}
+            />
           </div>
         ) : (
           <BracketZoomView

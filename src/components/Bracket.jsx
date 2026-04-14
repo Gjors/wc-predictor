@@ -14,18 +14,19 @@ import {
   R_SF,
 } from "../data/bracket";
 import { getTeam, sn, slotLabel } from "../utils/helpers";
-import MCard from "./MCard";
+import BracketNode from "./BracketNode";
 
-const MH = 42;
-const CW = 128;
-const CG = 22;
-const HALF_W = 4 * CW + 3 * CG;
+const MATCH_HEIGHT = 56;
+const CARD_WIDTH = 208;
+const COL_GAP = 24;
+const HALF_W = 4 * CARD_WIDTH + 3 * COL_GAP;
+const CONNECTOR = "#cbd5e1";
 
 export function BHalf({ r32ids, r16ids, qfids, sfids, groups, ta, winners, onPick, mirror, lang = "de" }) {
   const allIds = [r32ids, r16ids, qfids, sfids];
   const colX = (lvl) => {
     const idx = mirror ? 3 - lvl : lvl;
-    return idx * (CW + CG);
+    return idx * (CARD_WIDTH + COL_GAP);
   };
 
   const paths = [];
@@ -39,19 +40,19 @@ export function BHalf({ r32ids, r16ids, qfids, sfids, groups, ta, winners, onPic
       let x1;
       let x2;
       if (!mirror) {
-        x1 = colX(lvl) + CW;
+        x1 = colX(lvl) + CARD_WIDTH;
         x2 = colX(lvl + 1);
       } else {
         x1 = colX(lvl);
-        x2 = colX(lvl + 1) + CW;
+        x2 = colX(lvl + 1) + CARD_WIDTH;
       }
       const xM = (x1 + x2) / 2;
       paths.push(
         <g key={`${lvl}-${p}`}>
-          <line x1={x1} y1={tY} x2={xM} y2={tY} stroke="#c5ced6" strokeWidth="1.5" />
-          <line x1={x1} y1={bY} x2={xM} y2={bY} stroke="#c5ced6" strokeWidth="1.5" />
-          <line x1={xM} y1={tY} x2={xM} y2={bY} stroke="#c5ced6" strokeWidth="1.5" />
-          <line x1={xM} y1={mY} x2={x2} y2={mY} stroke="#c5ced6" strokeWidth="1.5" />
+          <line x1={x1} y1={tY} x2={xM} y2={tY} stroke={CONNECTOR} strokeWidth="1" />
+          <line x1={x1} y1={bY} x2={xM} y2={bY} stroke={CONNECTOR} strokeWidth="1" />
+          <line x1={xM} y1={tY} x2={xM} y2={bY} stroke={CONNECTOR} strokeWidth="1" />
+          <line x1={xM} y1={mY} x2={x2} y2={mY} stroke={CONNECTOR} strokeWidth="1" />
         </g>,
       );
     }
@@ -59,7 +60,7 @@ export function BHalf({ r32ids, r16ids, qfids, sfids, groups, ta, winners, onPic
 
   return (
     <div className="relative" style={{ width: HALF_W, height: HH }}>
-      <svg className="absolute inset-0 pointer-events-none" width={HALF_W} height={HH}>{paths}</svg>
+      <svg className="pointer-events-none absolute inset-0" width={HALF_W} height={HH}>{paths}</svg>
       {allIds.map((ids, lvl) => {
         const centers = CC[lvl];
         const x = colX(lvl);
@@ -67,7 +68,7 @@ export function BHalf({ r32ids, r16ids, qfids, sfids, groups, ta, winners, onPic
           const tA = getTeam(mid, "a", groups, ta, winners);
           const tB = getTeam(mid, "b", groups, ta, winners);
           return (
-            <MCard
+            <BracketNode
               key={mid}
               matchId={mid}
               teamA={tA}
@@ -77,7 +78,7 @@ export function BHalf({ r32ids, r16ids, qfids, sfids, groups, ta, winners, onPic
               venue={MI[mid]?.v || ""}
               winner={winners[mid]}
               onPick={onPick}
-              style={{ left: x, top: centers[mi] - MH / 2 }}
+              style={{ left: x, top: centers[mi] - MATCH_HEIGHT / 2 }}
               lang={lang}
             />
           );
@@ -94,159 +95,134 @@ export function Champ({ groups, ta, winners, lang = "de" }) {
   const t = UI_DICT[lang];
 
   return (
-    <div
-      className="flex items-center justify-center gap-3 py-2.5 px-3 sm:px-6 mb-4 rounded-lg"
-      style={{ background: "linear-gradient(135deg,#1a2d4a,#2a4a6b)", border: "2px solid #c9a84c" }}
-    >
+    <div className="mb-4 flex items-center justify-center gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3">
       {ISO_CODES[champ] ? (
         <img
-          src={`https://flagcdn.com/w20/${ISO_CODES[champ]}.png`}
+          src={`https://flagcdn.com/w40/${ISO_CODES[champ]}.png`}
           alt={`${champ} flag`}
-          className="w-8 h-6 object-cover rounded-sm shadow-sm inline-block"
+          className="h-6 w-10 rounded-sm border border-amber-200 object-cover"
           loading="lazy"
         />
       ) : (
-        <span className="w-8 h-6 rounded bg-gray-300 inline-block" aria-label={`${champ} flag missing`} />
+        <span className="inline-block h-6 w-10 rounded bg-slate-300" aria-label={`${champ} flag missing`} />
       )}
       <div className="text-center">
-        <div className="text-amber-400 font-bold tracking-widest uppercase" style={{ fontSize: 10 }}>{t.champion}</div>
-        <div className="text-white font-bold text-xl" style={{ fontFamily: "'Barlow Condensed',sans-serif" }}>{sn(champ, lang)}</div>
+        <div className="text-[10px] font-semibold uppercase tracking-[0.12em] text-amber-700">{t.champion}</div>
+        <div className="text-lg font-bold text-slate-900">{sn(champ, lang)}</div>
       </div>
-      <span className="text-3xl">🏆</span>
+      <span className="text-xl">🏆</span>
     </div>
   );
 }
 
 export function FullBracket({ groups, ta, winners, onPick, lang = "de" }) {
   const t = UI_DICT[lang];
-  const GAP = 36;
-  const TOTAL_W = HALF_W + GAP + CW + 12 + GAP + HALF_W;
+  const GAP = 42;
+  const FINAL_WIDTH = CARD_WIDTH + 20;
+  const TOTAL_W = HALF_W + GAP + FINAL_WIDTH + GAP + HALF_W;
 
   const finX = HALF_W + GAP;
-  const finY = HH / 2 - (MH + 10) / 2;
+  const finY = HH / 2 - MATCH_HEIGHT / 2;
   const finCY = HH / 2;
   const sfCY = CC[3][0];
 
-  const lSFx = 3 * (CW + CG) + CW;
-  const rSFx_local = 0;
-  const rSFx_global = HALF_W + GAP + CW + 12 + GAP + rSFx_local;
+  const lSFx = 3 * (CARD_WIDTH + COL_GAP) + CARD_WIDTH;
+  const rSFx_global = HALF_W + GAP + FINAL_WIDTH + GAP;
 
   const lMid = (lSFx + finX) / 2;
-  const rMid = (finX + CW + 12 + rSFx_global) / 2;
+  const rMid = (finX + FINAL_WIDTH + rSFx_global) / 2;
 
   const leftLabels = [t.roundR32, t.roundR16, t.roundQF, t.roundSF];
   const rightLabels = [...leftLabels].reverse();
 
   return (
-    <div>
+    <div className="rounded-2xl border border-slate-200 bg-slate-50 p-3 shadow-sm sm:p-4">
       <Champ groups={groups} ta={ta} winners={winners} lang={lang} />
-
-      <div className="flex items-end mb-1" style={{ width: TOTAL_W }}>
-        {leftLabels.map((l, i) => (
-          <div
-            key={`l${i}`}
-            className="text-center font-bold uppercase tracking-wider flex-shrink-0"
-            style={{
-              width: CW,
-              marginLeft: i ? CG : 0,
-              fontSize: 9,
-              color: "#1a2d4a",
-              borderBottom: "2px solid #1a2d4a",
-              paddingBottom: 3,
-              fontFamily: "'Barlow Condensed',sans-serif",
-            }}
-          >
-            {l}
+      <div className="overflow-x-auto pb-2">
+        <div className="min-w-max">
+          <div className="mb-2 flex items-end" style={{ width: TOTAL_W }}>
+            {leftLabels.map((label, i) => (
+              <div
+                key={`l${i}`}
+                className="flex-shrink-0 border-b border-slate-300 pb-1 text-center text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-600"
+                style={{ width: CARD_WIDTH, marginLeft: i ? COL_GAP : 0 }}
+              >
+                {label}
+              </div>
+            ))}
+            <div
+              className="flex-shrink-0 border-b border-amber-300 pb-1 text-center text-[10px] font-semibold uppercase tracking-[0.08em] text-amber-700"
+              style={{ width: FINAL_WIDTH, marginLeft: GAP, marginRight: GAP }}
+            >
+              {t.final}
+            </div>
+            {rightLabels.map((label, i) => (
+              <div
+                key={`r${i}`}
+                className="flex-shrink-0 border-b border-slate-300 pb-1 text-center text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-600"
+                style={{ width: CARD_WIDTH, marginLeft: i ? COL_GAP : 0 }}
+              >
+                {label}
+              </div>
+            ))}
           </div>
-        ))}
-        <div
-          className="text-center font-bold uppercase tracking-wider flex-shrink-0"
-          style={{
-            width: CW + 12,
-            marginLeft: GAP,
-            marginRight: GAP,
-            fontSize: 10,
-            color: "#c9a84c",
-            borderBottom: "2px solid #c9a84c",
-            paddingBottom: 3,
-            fontFamily: "'Barlow Condensed',sans-serif",
-          }}
-        >
-          {t.final}
-        </div>
-        {rightLabels.map((l, i) => (
-          <div
-            key={`r${i}`}
-            className="text-center font-bold uppercase tracking-wider flex-shrink-0"
-            style={{
-              width: CW,
-              marginLeft: i ? CG : 0,
-              fontSize: 9,
-              color: "#1a2d4a",
-              borderBottom: "2px solid #1a2d4a",
-              paddingBottom: 3,
-              fontFamily: "'Barlow Condensed',sans-serif",
-            }}
-          >
-            {l}
+
+          <div className="relative" style={{ width: TOTAL_W, height: HH + 8 }}>
+            <div className="absolute left-0 top-0">
+              <BHalf
+                r32ids={L_R32}
+                r16ids={L_R16}
+                qfids={L_QF}
+                sfids={L_SF}
+                groups={groups}
+                ta={ta}
+                winners={winners}
+                onPick={onPick}
+                mirror={false}
+                lang={lang}
+              />
+            </div>
+
+            <div className="absolute top-0" style={{ left: HALF_W + GAP + FINAL_WIDTH + GAP }}>
+              <BHalf
+                r32ids={R_R32}
+                r16ids={R_R16}
+                qfids={R_QF}
+                sfids={R_SF}
+                groups={groups}
+                ta={ta}
+                winners={winners}
+                onPick={onPick}
+                mirror
+                lang={lang}
+              />
+            </div>
+
+            <BracketNode
+              matchId={104}
+              teamA={getTeam(104, "a", groups, ta, winners)}
+              teamB={getTeam(104, "b", groups, ta, winners)}
+              labelA={slotLabel(104, "a")}
+              labelB={slotLabel(104, "b")}
+              venue={FIN.v}
+              winner={winners[104]}
+              onPick={onPick}
+              style={{ left: finX, top: finY }}
+              isFinal
+              lang={lang}
+            />
+
+            <svg className="pointer-events-none absolute inset-0" width={TOTAL_W} height={HH + 8}>
+              <line x1={lSFx} y1={sfCY} x2={lMid} y2={sfCY} stroke={CONNECTOR} strokeWidth="1" />
+              <line x1={lMid} y1={sfCY} x2={lMid} y2={finCY} stroke={CONNECTOR} strokeWidth="1" />
+              <line x1={lMid} y1={finCY} x2={finX} y2={finCY} stroke={CONNECTOR} strokeWidth="1" />
+
+              <line x1={rSFx_global} y1={sfCY} x2={rMid} y2={sfCY} stroke={CONNECTOR} strokeWidth="1" />
+              <line x1={rMid} y1={sfCY} x2={rMid} y2={finCY} stroke={CONNECTOR} strokeWidth="1" />
+              <line x1={rMid} y1={finCY} x2={finX + FINAL_WIDTH} y2={finCY} stroke={CONNECTOR} strokeWidth="1" />
+            </svg>
           </div>
-        ))}
-      </div>
-
-      <div className="relative" style={{ width: TOTAL_W, height: HH + 10 }}>
-        <div className="absolute" style={{ left: 0, top: 0 }}>
-          <BHalf
-            r32ids={L_R32}
-            r16ids={L_R16}
-            qfids={L_QF}
-            sfids={L_SF}
-            groups={groups}
-            ta={ta}
-            winners={winners}
-            onPick={onPick}
-            mirror={false}
-            lang={lang}
-          />
         </div>
-
-        <div className="absolute" style={{ left: HALF_W + GAP + CW + 12 + GAP, top: 0 }}>
-          <BHalf
-            r32ids={R_R32}
-            r16ids={R_R16}
-            qfids={R_QF}
-            sfids={R_SF}
-            groups={groups}
-            ta={ta}
-            winners={winners}
-            onPick={onPick}
-            mirror
-            lang={lang}
-          />
-        </div>
-
-        <MCard
-          matchId={104}
-          teamA={getTeam(104, "a", groups, ta, winners)}
-          teamB={getTeam(104, "b", groups, ta, winners)}
-          labelA={slotLabel(104, "a")}
-          labelB={slotLabel(104, "b")}
-          venue={FIN.v}
-          winner={winners[104]}
-          onPick={onPick}
-          style={{ left: finX, top: finY }}
-          isFinal
-          lang={lang}
-        />
-
-        <svg className="absolute inset-0 pointer-events-none" width={TOTAL_W} height={HH + 10}>
-          <line x1={lSFx} y1={sfCY} x2={lMid} y2={sfCY} stroke="#c5ced6" strokeWidth="1.5" />
-          <line x1={lMid} y1={sfCY} x2={lMid} y2={finCY} stroke="#c5ced6" strokeWidth="1.5" />
-          <line x1={lMid} y1={finCY} x2={finX} y2={finCY} stroke="#c5ced6" strokeWidth="1.5" />
-
-          <line x1={rSFx_global} y1={sfCY} x2={rMid} y2={sfCY} stroke="#c5ced6" strokeWidth="1.5" />
-          <line x1={rMid} y1={sfCY} x2={rMid} y2={finCY} stroke="#c5ced6" strokeWidth="1.5" />
-          <line x1={rMid} y1={finCY} x2={finX + CW + 12} y2={finCY} stroke="#c5ced6" strokeWidth="1.5" />
-        </svg>
       </div>
     </div>
   );
