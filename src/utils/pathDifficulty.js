@@ -1,6 +1,6 @@
 import { INIT_GROUPS, GIDS } from "../data/constants";
 import { POLY_GROUP_WINNER, POLY_WINNER, polyStrength } from "../data/polymarket";
-import { R32, R16, QF, MI } from "../data/bracket";
+import { R32, R16, QF, SF, FIN, MI } from "../data/bracket";
 import { solveThirds } from "./helpers";
 
 const TEAM_TO_GROUP = Object.fromEntries(
@@ -64,7 +64,7 @@ const buildExpectedKnockout = (groups) => {
     }
   });
 
-  [...R16, ...QF].forEach((match) => {
+  [...R16, ...QF, ...SF, FIN].forEach((match) => {
     const teamA = winners[match.a] || null;
     const teamB = winners[match.b] || null;
     matches[match.id] = { ...match, teamA, teamB };
@@ -76,7 +76,7 @@ const buildExpectedKnockout = (groups) => {
   return { thirdAssignments, matches, winners };
 };
 
-const findPathToQuarterfinal = (team, matches, winners) => {
+const findPathToFinal = (team, matches, winners) => {
   const r32Match = R32.find((m) => matches[m.id]?.teamA === team || matches[m.id]?.teamB === team);
   if (!r32Match) return null;
 
@@ -85,6 +85,12 @@ const findPathToQuarterfinal = (team, matches, winners) => {
 
   const qfMatch = QF.find((m) => m.a === r16Match.id || m.b === r16Match.id);
   if (!qfMatch) return null;
+
+  const sfMatch = SF.find((m) => m.a === qfMatch.id || m.b === qfMatch.id);
+  if (!sfMatch) return null;
+
+  const finMatch = FIN.a === sfMatch.id || FIN.b === sfMatch.id ? FIN : null;
+  if (!finMatch) return null;
 
   const opponent = (match, focusTeam) => {
     const data = matches[match.id];
@@ -97,8 +103,10 @@ const findPathToQuarterfinal = (team, matches, winners) => {
   const r32Opponent = opponent(r32Match, team);
   const r16Opponent = opponent(r16Match, winners[r32Match.id] || team);
   const qfOpponent = opponent(qfMatch, winners[r16Match.id] || team);
+  const sfOpponent = opponent(sfMatch, winners[qfMatch.id] || team);
+  const finOpponent = opponent(finMatch, winners[sfMatch.id] || team);
 
-  const opponents = [r32Opponent, r16Opponent, qfOpponent].filter(Boolean);
+  const opponents = [r32Opponent, r16Opponent, qfOpponent, sfOpponent, finOpponent].filter(Boolean);
   const totalStrength = opponents.reduce((sum, opp) => sum + polyStrength(opp), 0);
   const averageStrength = opponents.length ? totalStrength / opponents.length : 0;
 
@@ -107,6 +115,8 @@ const findPathToQuarterfinal = (team, matches, winners) => {
       r32: r32Opponent,
       r16: r16Opponent,
       qf: qfOpponent,
+      sf: sfOpponent,
+      fin: finOpponent,
     },
     totalStrength,
     averageStrength,
@@ -134,7 +144,7 @@ export const buildPathDifficultyTierList = ({ favoriteCount = 24, finishOverride
 
   const entries = favorites
     .map((team) => {
-      const path = findPathToQuarterfinal(team, knockout.matches, knockout.winners);
+      const path = findPathToFinal(team, knockout.matches, knockout.winners);
       if (!path) return null;
       return {
         team,
