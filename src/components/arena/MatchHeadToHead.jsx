@@ -122,7 +122,7 @@ export default function MatchHeadToHead({
 
       <div className="mt-4 grid gap-3 md:grid-cols-3">
         <article className="rounded-xl border border-slate-200 bg-white p-3">
-          <p className="text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-500">Polymarket edge</p>
+          <p className="text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-500">Odds edge</p>
           <p className="mt-1 text-sm text-slate-700">{hint}</p>
         </article>
         <article className="rounded-xl border border-slate-200 bg-white p-3">

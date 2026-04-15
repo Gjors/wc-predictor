@@ -52,7 +52,7 @@ export const TS = [
   {m:85,e:["E","F","G","I","J"]},{m:87,e:["D","E","I","J","L"]},
 ];
 
-const MH=42, MG=10;
+const MH=56, MG=12;
 const MU=MH+MG;
 const c0=Array(8).fill(0).map((_,i)=>i*MU+MH/2);
 const c1=[];for(let i=0;i<8;i+=2)c1.push((c0[i]+c0[i+1])/2);

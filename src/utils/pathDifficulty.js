@@ -25,7 +25,7 @@ const buildExpectedGroups = (finishOverride = "none") => {
     const team = finishOverride.team;
     if (!team || TEAM_TO_GROUP[team] !== gid) return;
     const withoutTeam = order.filter((name) => name !== team);
-    const insertAt = finishOverride.rank === 2 ? 1 : 0;
+    const insertAt = finishOverride.rank === 2 ? 1 : finishOverride.rank === 3 ? 2 : 0;
     withoutTeam.splice(insertAt, 0, team);
     groups[gid] = withoutTeam;
   });
@@ -154,3 +154,5 @@ export const buildPathDifficultyTierList = ({ favoriteCount = 24, finishOverride
 
 export const getTeamGroup = (team) => TEAM_TO_GROUP[team] || null;
 export const getMatchById = (id) => MI[id] || null;
+export const getTierByTeam = (tiers, team) =>
+  Object.entries(tiers).find(([, entries]) => entries.some((entry) => entry.team === team))?.[0] || null;
