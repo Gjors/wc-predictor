@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { AnimatePresence, motion as Motion } from "framer-motion";
 import { ISO_CODES, UI_DICT } from "../data/constants";
 import { sn } from "../utils/helpers";
 import { buildPathDifficultyTierList, getTeamGroup, getTierByTeam } from "../utils/pathDifficulty";
@@ -19,6 +20,7 @@ const FINISH_SCENARIOS = [
 ];
 
 const ROUND_ORDER = ["r32", "r16", "qf", "sf", "fin"];
+const SIM_STEP_MS = 700;
 
 function Flag({ team }) {
   const code = ISO_CODES[team];
@@ -29,24 +31,43 @@ function Flag({ team }) {
   return <img src={`https://flagcdn.com/w20/${code}.png`} alt={`${team} flag`} className="h-3 w-4 rounded-sm object-cover" loading="lazy" />;
 }
 
-function PathLine({ title, team, lang, visible = true }) {
-  if (!team) {
-    return (
-      <div className="rounded border border-dashed border-slate-300 px-2 py-1 text-[11px] text-slate-500">
-        {title}: —
-      </div>
-    );
-  }
+function PathLine({ title, team, lang, state = "locked", delay = 0 }) {
+  const isVisible = state === "revealed";
+  const isGhost = state === "ghost";
 
   return (
-    <div
-      className="flex items-center gap-1.5 rounded border border-slate-200 bg-white px-2 py-1 text-[11px] text-slate-700 transition-opacity"
-      style={{ opacity: visible ? 1 : 0.3 }}
+    <Motion.div
+      layout
+      initial={false}
+      animate={
+        isVisible
+          ? { opacity: 1, y: 0, scale: 1, filter: "blur(0px)" }
+          : { opacity: isGhost ? 0.35 : 0.75, y: 0, scale: 1, filter: "blur(0px)" }
+      }
+      transition={{ type: "spring", stiffness: 210, damping: 22, delay }}
+      className={`relative flex items-center gap-1.5 rounded border px-2 py-1 text-[11px] ${
+        isVisible ? "border-cyan-300 bg-cyan-50/80 text-slate-800 shadow-[0_0_0_1px_rgba(34,211,238,0.25)]" : "border-dashed border-slate-300 bg-slate-50 text-slate-500"
+      }`}
     >
-      <span className="font-semibold text-slate-500">{title}:</span>
-      <Flag team={team} />
-      <span className="font-semibold">{sn(team, lang)}</span>
-    </div>
+      {isVisible ? (
+        <Motion.span
+          className="pointer-events-none absolute inset-0 rounded"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: [0, 0.55, 0] }}
+          transition={{ duration: 0.8, ease: "easeOut" }}
+          style={{ background: "linear-gradient(120deg, transparent 0%, rgba(34,211,238,0.28) 50%, transparent 100%)" }}
+        />
+      ) : null}
+      <span className="font-semibold">{title}:</span>
+      {isVisible && team ? (
+        <>
+          <Flag team={team} />
+          <span className="font-semibold">{sn(team, lang)}</span>
+        </>
+      ) : (
+        <span className="font-mono text-[10px] tracking-wide text-slate-400">LOCKED</span>
+      )}
+    </Motion.div>
   );
 }
 
@@ -95,13 +116,19 @@ export default function PathDifficultyTierList({ lang = "de" }) {
   const t = UI_DICT[lang];
   const [selectedTeam, setSelectedTeam] = useState("");
   const [selectedRank, setSelectedRank] = useState(1);
-  const [visibleRounds, setVisibleRounds] = useState(ROUND_ORDER.length);
+  const [visibleRounds, setVisibleRounds] = useState(0);
   const [isSimulatingPath, setIsSimulatingPath] = useState(false);
+  const [hasCompletedSimulation, setHasCompletedSimulation] = useState(false);
 
   const teams = useMemo(
     () => Object.entries(POLY_WINNER).sort((a, b) => b[1] - a[1]).map(([team]) => team),
     [],
   );
+  const resetSimulation = () => {
+    setVisibleRounds(0);
+    setIsSimulatingPath(false);
+    setHasCompletedSimulation(false);
+  };
 
   const selectedScenario = FINISH_SCENARIOS.find((scenario) => scenario.rank === selectedRank) || FINISH_SCENARIOS[0];
 
@@ -120,11 +147,6 @@ export default function PathDifficultyTierList({ lang = "de" }) {
   }, [selectedTeam, selectedRank]);
 
   useEffect(() => {
-    setVisibleRounds(ROUND_ORDER.length);
-    setIsSimulatingPath(false);
-  }, [selectedTeam, selectedRank]);
-
-  useEffect(() => {
     if (!isSimulatingPath || !scenarioResult.entry) return undefined;
 
     const timers = ROUND_ORDER.map((_, index) =>
@@ -132,14 +154,16 @@ export default function PathDifficultyTierList({ lang = "de" }) {
         setVisibleRounds(index + 1);
         if (index === ROUND_ORDER.length - 1) {
           setIsSimulatingPath(false);
+          setHasCompletedSimulation(true);
         }
-      }, (index + 1) * 520),
+      }, (index + 1) * SIM_STEP_MS),
     );
 
     return () => timers.forEach((timer) => clearTimeout(timer));
   }, [isSimulatingPath, scenarioResult.entry]);
 
   const tierInfo = scenarioResult.tier ? TIER_STYLE[scenarioResult.tier] : null;
+  const progress = ROUND_ORDER.length ? Math.min(visibleRounds / ROUND_ORDER.length, 1) : 0;
 
   return (
     <div className="p-3 sm:p-4" style={{ background: "#f7f9fb" }}>
@@ -158,14 +182,28 @@ export default function PathDifficultyTierList({ lang = "de" }) {
           {t.tierTeamSelect}
         </label>
 
-        <TeamSelect teams={teams} selectedTeam={selectedTeam} onSelect={setSelectedTeam} lang={lang} t={t} />
+        <TeamSelect
+          teams={teams}
+          selectedTeam={selectedTeam}
+          onSelect={(team) => {
+            resetSimulation();
+            setSelectedTeam(team);
+          }}
+          lang={lang}
+          t={t}
+        />
 
         <div className="mt-3 flex flex-wrap gap-2">
           {FINISH_SCENARIOS.map((scenario) => (
             <button
               key={scenario.key}
               type="button"
-              onClick={() => setSelectedRank(scenario.rank)}
+              onClick={() => {
+                if (scenario.rank !== selectedRank) {
+                  resetSimulation();
+                  setSelectedRank(scenario.rank);
+                }
+              }}
               className="rounded border px-2 py-1 text-xs font-semibold"
               style={{
                 borderColor: selectedRank === scenario.rank ? "#0f172a" : "#cbd5e1",
@@ -199,19 +237,59 @@ export default function PathDifficultyTierList({ lang = "de" }) {
 
           {scenarioResult.entry ? (
             <>
-              <div className="flex flex-wrap gap-2">
-                <PathLine title={t.roundR32} team={scenarioResult.entry.rounds.r32} lang={lang} visible={visibleRounds >= 1} />
-                <PathLine title={t.roundR16} team={scenarioResult.entry.rounds.r16} lang={lang} visible={visibleRounds >= 2} />
-                <PathLine title={t.roundQF} team={scenarioResult.entry.rounds.qf} lang={lang} visible={visibleRounds >= 3} />
-                <PathLine title={t.roundSF} team={scenarioResult.entry.rounds.sf} lang={lang} visible={visibleRounds >= 4} />
-                <PathLine title={t.final} team={scenarioResult.entry.rounds.fin} lang={lang} visible={visibleRounds >= 5} />
+              <div className="mb-3 rounded-lg border border-slate-200 bg-slate-50 px-2 py-2">
+                <div className="mb-1 flex items-center justify-between text-[10px] uppercase tracking-[0.16em] text-slate-500">
+                  <span>{isSimulatingPath ? t.simulating : hasCompletedSimulation ? "Simulation Complete" : "Simulation Ready"}</span>
+                  <span>{Math.round(progress * 100)}%</span>
+                </div>
+                <div className="h-1.5 overflow-hidden rounded-full bg-slate-200">
+                  <Motion.div
+                    className="h-full rounded-full bg-gradient-to-r from-cyan-400 via-blue-500 to-fuchsia-500"
+                    initial={false}
+                    animate={{ width: `${progress * 100}%` }}
+                    transition={{ duration: 0.45, ease: "easeOut" }}
+                  />
+                </div>
               </div>
+
+              <div className="flex flex-wrap gap-2">
+                {[
+                  [t.roundR32, scenarioResult.entry.rounds.r32],
+                  [t.roundR16, scenarioResult.entry.rounds.r16],
+                  [t.roundQF, scenarioResult.entry.rounds.qf],
+                  [t.roundSF, scenarioResult.entry.rounds.sf],
+                  [t.final, scenarioResult.entry.rounds.fin],
+                ].map(([title, team], index) => (
+                  <PathLine
+                    key={`${title}-${team}`}
+                    title={title}
+                    team={team}
+                    lang={lang}
+                    state={visibleRounds > index ? "revealed" : isSimulatingPath ? "ghost" : "locked"}
+                    delay={index * 0.03}
+                  />
+                ))}
+              </div>
+
+              <AnimatePresence>
+                {!isSimulatingPath && !hasCompletedSimulation ? (
+                  <Motion.p
+                    initial={{ opacity: 0, y: 4 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -4 }}
+                    className="mt-2 text-[11px] text-slate-500"
+                  >
+                    Starte die Simulation, um den kompletten Turnierpfad freizuschalten.
+                  </Motion.p>
+                ) : null}
+              </AnimatePresence>
 
               <button
                 type="button"
                 onClick={() => {
                   setVisibleRounds(0);
                   setIsSimulatingPath(true);
+                  setHasCompletedSimulation(false);
                 }}
                 disabled={isSimulatingPath}
                 className="mt-3 rounded bg-slate-900 px-3 py-1.5 text-xs font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60"
