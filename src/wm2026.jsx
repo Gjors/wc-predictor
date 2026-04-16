@@ -3,7 +3,8 @@ import GroupTable from "./components/GroupTable";
 import ThirdSel from "./components/ThirdSel";
 import { FullBracket } from "./components/Bracket";
 import PathDifficultyTierList from "./components/PathDifficultyTierList";
-import SimulationResultsModal from "./components/SimulationResultsModal";
+import SimulationControlBar from "./components/SimulationControlBar";
+import SimulationResultsTable from "./components/SimulationResultsTable";
 import { FORM, GIDS, INIT_GROUPS, UI_DICT } from "./data/constants";
 import { R32, R16, QF, SF, FIN } from "./data/bracket";
 import {
@@ -260,9 +261,8 @@ export default function App() {
 
   const totalPicks = Object.keys(winners).length;
   const [simulating, setSimulating] = useState(false);
-  const [simulationMenuOpen, setSimulationMenuOpen] = useState(false);
-  const [multiSimProgress, setMultiSimProgress] = useState({ current: 0, total: 0 });
-  const [simulationResults, setSimulationResults] = useState({ isOpen: false, runs: 0, rows: [] });
+  const [simulationStats, setSimulationStats] = useState({ totalRuns: 0, aggregate: {} });
+  const [thinkingState, setThinkingState] = useState({ isActive: false, pendingRuns: 0 });
   const [selectedScenario, setSelectedScenario] = useState("");
   const groupsReady = selThirds.length === 8;
   const withViewTransition = useCallback(async (updateFn) => {
@@ -377,7 +377,6 @@ export default function App() {
   // ── Simulate bracket (weighted random via Polymarket model, round by round) ──
   const simulateBracketFn = useCallback(async () => {
     setSimulating(true);
-    setSimulationMenuOpen(false);
     setWinners({});
     await delay(200);
 
@@ -401,37 +400,76 @@ export default function App() {
 
   const simulateBracketMultipleFn = useCallback(
     async (runs) => {
-      if (runs <= 1) {
-        await simulateBracketFn();
-        return;
-      }
+      if (runs <= 0 || !groupsReady) return;
 
-      setSimulationMenuOpen(false);
+      const visualDelay = 500 + Math.floor(Math.random() * 1000);
       setSimulating(true);
-      setMultiSimProgress({ current: 0, total: runs });
+      setThinkingState({ isActive: true, pendingRuns: runs });
 
-      const { rows } = await runMonteCarloBracketSimulations({
-        runs,
-        groups,
-        ta,
-        mode: PROB_MODE,
-        onProgress: (current, total) => setMultiSimProgress({ current, total }),
+      const [result] = await Promise.all([
+        runMonteCarloBracketSimulations({
+          runs,
+          groups,
+          ta,
+          mode: PROB_MODE,
+        }),
+        delay(visualDelay),
+      ]);
+
+      setSimulationStats((prev) => {
+        const nextAggregate = { ...prev.aggregate };
+
+        Object.entries(result.aggregate).forEach(([team, stats]) => {
+          const existing = nextAggregate[team] || {
+            wins: 0,
+            finals: 0,
+            semiFinals: 0,
+            quarterFinals: 0,
+          };
+
+          nextAggregate[team] = {
+            wins: existing.wins + stats.wins,
+            finals: existing.finals + stats.finals,
+            semiFinals: existing.semiFinals + stats.semiFinals,
+            quarterFinals: existing.quarterFinals + stats.quarterFinals,
+          };
+        });
+
+        return {
+          totalRuns: prev.totalRuns + runs,
+          aggregate: nextAggregate,
+        };
       });
 
-      setSimulationResults({
-        isOpen: true,
-        runs,
-        rows,
-      });
+      setThinkingState({ isActive: false, pendingRuns: 0 });
       setSimulating(false);
-      setMultiSimProgress({ current: 0, total: 0 });
     },
-    [groups, ta, simulateBracketFn],
+    [groups, groupsReady, ta],
   );
 
   const resetBracketFn = useCallback(() => {
     setWinners({});
   }, []);
+
+  const resetSimulationStats = useCallback(() => {
+    setSimulationStats({ totalRuns: 0, aggregate: {} });
+    setThinkingState({ isActive: false, pendingRuns: 0 });
+  }, []);
+
+  const simulationRows = useMemo(() => {
+    const rows = Object.entries(simulationStats.aggregate).map(([team, stats]) => ({
+      team,
+      ...stats,
+    }));
+
+    return rows.sort((a, b) => {
+      if (b.wins !== a.wins) return b.wins - a.wins;
+      if (b.finals !== a.finals) return b.finals - a.finals;
+      if (b.semiFinals !== a.semiFinals) return b.semiFinals - a.semiFinals;
+      if (b.quarterFinals !== a.quarterFinals) return b.quarterFinals - a.quarterFinals;
+      return a.team.localeCompare(b.team);
+    });
+  }, [simulationStats.aggregate]);
 
   // ── URL sync: update address bar on every state change ──
   useEffect(() => {
@@ -665,65 +703,22 @@ export default function App() {
             >
               {t.bracketHeading}
             </h2>
-            <div className="flex flex-wrap items-center gap-2 mb-2">
-              <div className="relative inline-flex">
-                <button
-                  onClick={() => simulateBracketMultipleFn(1)}
-                  disabled={simulating || !groupsReady}
-                  className="px-3 py-1.5 rounded-l text-xs font-bold uppercase tracking-wide text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                  style={{ background: simulating || !groupsReady ? "#64748b" : "#059669", fontFamily: "'Barlow Condensed',sans-serif" }}
-                >
-                  {simulating ? t.simulating : t.simBracketSingle}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setSimulationMenuOpen((prev) => !prev)}
-                  disabled={simulating || !groupsReady}
-                  aria-label={t.simBracketMenu}
-                  className="px-2 py-1.5 rounded-r text-xs font-bold uppercase tracking-wide text-white border-l border-white/30 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                  style={{ background: simulating || !groupsReady ? "#64748b" : "#059669", fontFamily: "'Barlow Condensed',sans-serif" }}
-                >
-                  ▾
-                </button>
-                {simulationMenuOpen && !simulating && groupsReady && (
-                  <div className="absolute left-0 top-full z-20 mt-1 min-w-[170px] overflow-hidden rounded border border-slate-200 bg-white shadow-lg">
-                    <button
-                      type="button"
-                      onClick={() => simulateBracketMultipleFn(1)}
-                      className="block w-full px-3 py-2 text-left text-xs font-semibold text-slate-700 hover:bg-slate-100"
-                    >
-                      {t.simBracketSingle}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => simulateBracketMultipleFn(10)}
-                      className="block w-full px-3 py-2 text-left text-xs font-semibold text-slate-700 hover:bg-slate-100"
-                    >
-                      {t.simBracketTen}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => simulateBracketMultipleFn(100)}
-                      className="block w-full px-3 py-2 text-left text-xs font-semibold text-slate-700 hover:bg-slate-100"
-                    >
-                      {t.simBracketHundred}
-                    </button>
-                  </div>
-                )}
-              </div>
-              {multiSimProgress.total > 1 && (
-                <div className="flex items-center gap-2 rounded border border-slate-200 bg-white px-2 py-1.5 text-[11px] text-slate-600">
-                  <span className="inline-block h-3 w-3 animate-spin rounded-full border-2 border-slate-300 border-t-emerald-600" aria-hidden="true" />
-                  <span>{t.simulatingRuns.replace("{current}", String(multiSimProgress.current)).replace("{total}", String(multiSimProgress.total))}</span>
-                </div>
-              )}
+            <div className="mb-2 flex flex-wrap items-center gap-2">
+              <button
+                onClick={simulateBracketFn}
+                disabled={simulating || !groupsReady}
+                className="px-3 py-1.5 rounded text-xs font-bold uppercase tracking-wide text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                style={{ background: simulating || !groupsReady ? "#64748b" : "#059669", fontFamily: "'Barlow Condensed',sans-serif" }}
+              >
+                {simulating ? t.simulating : t.simBracketSingle}
+              </button>
               <button
                 onClick={resetBracketFn}
                 disabled={simulating}
                 className="px-3 py-1.5 rounded text-xs font-bold uppercase tracking-wide text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 style={{ background: "#64748b", fontFamily: "'Barlow Condensed',sans-serif" }}
               >
-                {t.reset}
+                {t.resetBracket}
               </button>
               {!groupsReady && (
                 <span className="text-amber-600" style={{ fontSize: 10 }}>
@@ -731,28 +726,41 @@ export default function App() {
                 </span>
               )}
             </div>
-            <p className="text-xs text-slate-400 mb-2 sm:hidden">{t.swipeHint}</p>
+            <SimulationControlBar
+              totalRuns={simulationStats.totalRuns}
+              isThinking={thinkingState.isActive}
+              pendingRuns={thinkingState.pendingRuns}
+              disabled={simulating || !groupsReady}
+              onAddRuns={simulateBracketMultipleFn}
+              onResetStats={resetSimulationStats}
+              labels={{
+                totalSimulationsLabel: t.simTotalRuns,
+                runsSuffix: t.simRunsSuffix,
+                resetStats: t.simResetStats,
+                calculatingLabel: t.simCalculating,
+                processingCounter: t.simProcessingCounter,
+              }}
+            />
+            <p className="text-xs text-slate-400 mb-2 mt-3 sm:hidden">{t.swipeHint}</p>
             <FullBracket groups={groups} ta={ta} winners={winners} onPick={handlePick} lang={lang} />
+            <SimulationResultsTable
+              rows={simulationRows}
+              totalRuns={simulationStats.totalRuns}
+              lang={lang}
+              labels={{
+                title: t.simResultsTitle,
+                subtitle: t.simResultsSubtitle,
+                team: t.simResultsTeam,
+                champion: t.simResultsChampion,
+                final: t.simResultsFinal,
+                semiFinal: t.simResultsSemiFinal,
+                quarterFinal: t.simResultsQuarterFinal,
+                emptyState: t.simResultsEmptyState,
+              }}
+            />
           </div>
         )}
       </div>
-      <SimulationResultsModal
-        isOpen={simulationResults.isOpen}
-        rows={simulationResults.rows}
-        runs={simulationResults.runs}
-        lang={lang}
-        labels={{
-          title: t.simResultsTitle,
-          subtitle: t.simResultsSubtitle,
-          team: t.simResultsTeam,
-          champion: t.simResultsChampion,
-          final: t.simResultsFinal,
-          semiFinal: t.simResultsSemiFinal,
-          quarterFinal: t.simResultsQuarterFinal,
-          close: t.close,
-        }}
-        onClose={() => setSimulationResults({ isOpen: false, runs: 0, rows: [] })}
-      />
     </div>
     </ModelContext.Provider>
   );
