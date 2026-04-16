@@ -3,7 +3,7 @@ import GroupTable from "./components/GroupTable";
 import ThirdSel from "./components/ThirdSel";
 import { FullBracket } from "./components/Bracket";
 import PathDifficultyTierList from "./components/PathDifficultyTierList";
-import { GIDS, INIT_GROUPS, UI_DICT } from "./data/constants";
+import { FORM, GIDS, INIT_GROUPS, UI_DICT } from "./data/constants";
 import { R32, R16, QF, SF, FIN } from "./data/bracket";
 import {
   clearDown,
@@ -16,6 +16,7 @@ import {
   teamStrength,
 } from "./utils/helpers";
 import { ModelContext } from "./utils/model";
+import { POLY_GROUP_WINNER } from "./data/polymarket";
 
 const PROB_MODE = "poly";
 
@@ -78,6 +79,51 @@ const GROUP_MATCHES = [
   [3, 0],
   [1, 2],
 ];
+
+const SCENARIO_KEY = {
+  STRICT_FAVORITES: "strict-favorites",
+  REALISTIC_TOURNAMENT: "realistic-tournament",
+  HOT_FORM: "hot-form",
+  CHAOS_MODE: "chaos-mode",
+};
+
+const getFormScore = (team) => {
+  const recentForm = FORM[team] || [];
+  return recentForm.reduce((total, entry) => {
+    const result = entry?.[0];
+    if (result === "S" || result === "W") return total + 3;
+    if (result === "U" || result === "D") return total + 1;
+    return total;
+  }, 0);
+};
+
+const getPolyGroupStrength = (team) => POLY_GROUP_WINNER[team] || teamStrength(team, PROB_MODE) || 0.1;
+
+const sortByStrictFavorites = (teams) =>
+  [...teams].sort((a, b) => {
+    const byGroupWinnerOdds = getPolyGroupStrength(b) - getPolyGroupStrength(a);
+    if (byGroupWinnerOdds !== 0) return byGroupWinnerOdds;
+    return teamStrength(b, PROB_MODE) - teamStrength(a, PROB_MODE);
+  });
+
+const sortByHotForm = (teams) =>
+  [...teams].sort((a, b) => {
+    const byForm = getFormScore(b) - getFormScore(a);
+    if (byForm !== 0) return byForm;
+    return getPolyGroupStrength(b) - getPolyGroupStrength(a);
+  });
+
+const sortByRealisticTournament = (teams) => weightedShuffle(teams, (team) => getPolyGroupStrength(team));
+
+const sortByChaosMode = (teams) => {
+  const weights = teams.map((team) => getPolyGroupStrength(team));
+  const maxWeight = Math.max(...weights, 1);
+  return weightedShuffle(teams, (team) => {
+    const baseWeight = getPolyGroupStrength(team);
+    const inverted = Math.max(0.05, maxWeight - baseWeight + 0.2);
+    return inverted * inverted;
+  });
+};
 
 // Detail-mode group simulator: turns a pair of team strengths into a
 // 1/X/2 pick with a closeness-dependent draw rate using Polymarket values.
@@ -212,10 +258,20 @@ export default function App() {
 
   const totalPicks = Object.keys(winners).length;
   const [simulating, setSimulating] = useState(false);
+  const [selectedScenario, setSelectedScenario] = useState("");
   const groupsReady = selThirds.length === 8;
+  const withViewTransition = useCallback(async (updateFn) => {
+    if (typeof document === "undefined" || typeof document.startViewTransition !== "function") {
+      await updateFn();
+      return;
+    }
+    const transition = document.startViewTransition(() => updateFn());
+    await transition.finished;
+  }, []);
   // ── Simulate groups (weighted random via Polymarket model) ──
   const simulateGroupsFn = useCallback(async () => {
     setSimulating(true);
+    setSelectedScenario("");
     setWinners({});
     setSelThirds([]);
     if (isDetailMode) {
@@ -265,7 +321,53 @@ export default function App() {
     setSelThirds([]);
     setWinners({});
     setGroupPicks({});
+    setSelectedScenario("");
   }, []);
+
+  const applyQuickScenario = useCallback(
+    async (scenarioKey) => {
+      if (!scenarioKey) return;
+      setSimulating(true);
+      setSelectedScenario(scenarioKey);
+      setWinners({});
+      setSelThirds([]);
+      setGroupPicks({});
+
+      const sorterByScenario = {
+        [SCENARIO_KEY.STRICT_FAVORITES]: sortByStrictFavorites,
+        [SCENARIO_KEY.REALISTIC_TOURNAMENT]: sortByRealisticTournament,
+        [SCENARIO_KEY.HOT_FORM]: sortByHotForm,
+        [SCENARIO_KEY.CHAOS_MODE]: sortByChaosMode,
+      };
+
+      const sorter = sorterByScenario[scenarioKey];
+      if (!sorter) {
+        setSimulating(false);
+        return;
+      }
+
+      const scenarioGroups = {};
+      GIDS.forEach((gid) => {
+        scenarioGroups[gid] = sorter(groups[gid] || INIT_GROUPS[gid]);
+      });
+
+      for (const gid of GIDS) {
+        await delay(70);
+        await withViewTransition(() => {
+          setGroups((prevGroups) => ({ ...prevGroups, [gid]: scenarioGroups[gid] }));
+        });
+      }
+
+      const thirdScores = GIDS.map((g) => ({
+        g,
+        score: teamStrength(scenarioGroups[g][2], PROB_MODE) * (0.5 + Math.random()),
+      }));
+      thirdScores.sort((a, b) => b.score - a.score);
+      setSelThirds(thirdScores.slice(0, 8).map((item) => item.g));
+      setSimulating(false);
+    },
+    [groups, withViewTransition],
+  );
 
   // ── Simulate bracket (weighted random via Polymarket model, round by round) ──
   const simulateBracketFn = useCallback(async () => {
@@ -461,6 +563,27 @@ export default function App() {
               >
                 {t.reset}
               </button>
+              <div className="relative">
+                <select
+                  value={selectedScenario}
+                  disabled={simulating}
+                  onChange={(event) => applyQuickScenario(event.target.value)}
+                  className="px-3 py-1.5 rounded text-xs font-bold uppercase tracking-wide text-white cursor-pointer transition-colors duration-200 hover:brightness-110 disabled:opacity-50 disabled:cursor-not-allowed appearance-none pr-8"
+                  style={{ background: "#1d4ed8", fontFamily: "'Barlow Condensed',sans-serif" }}
+                >
+                  <option value="">{t.quickScenarios}</option>
+                  <option value={SCENARIO_KEY.STRICT_FAVORITES}>{t.scenarioStrictFavorites}</option>
+                  <option value={SCENARIO_KEY.REALISTIC_TOURNAMENT}>{t.scenarioRealisticTournament}</option>
+                  <option value={SCENARIO_KEY.HOT_FORM}>{t.scenarioHotForm}</option>
+                  <option value={SCENARIO_KEY.CHAOS_MODE}>{t.scenarioChaosMode}</option>
+                </select>
+                <span
+                  className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-white"
+                  style={{ fontSize: 10 }}
+                >
+                  ▾
+                </span>
+              </div>
               <button
                 onClick={handleToggleDetailMode}
                 className="px-3 py-1.5 rounded text-xs font-bold uppercase tracking-wide text-white cursor-pointer transition-colors duration-200 hover:brightness-110"
