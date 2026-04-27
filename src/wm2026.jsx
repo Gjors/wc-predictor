@@ -199,6 +199,10 @@ export default function App() {
   const t = UI_DICT[lang];
   const isDark = theme === "dark";
   const themeToggleLabel = isDark ? "☀️ Light" : "🌙 Dark";
+  const baseControlClass = "cursor-pointer rounded-lg border px-2 py-1 text-xs font-bold transition-colors duration-200";
+  const themedControlClass = isDark
+    ? "border-slate-500/40 bg-slate-800/80 text-white hover:bg-slate-700"
+    : "border-slate-300 bg-white text-slate-700 hover:bg-slate-100";
 
   const ta = useMemo(() => solveThirds(selThirds), [selThirds]);
 
@@ -514,14 +518,14 @@ export default function App() {
             {/* Language toggle */}
             <button
               onClick={() => setLang((l) => (l === "de" ? "en" : "de"))}
-              className={`cursor-pointer rounded-lg border px-2 py-1 text-xs font-bold transition-colors duration-200 ${isDark ? "border-slate-500/40 bg-slate-800/80 text-white hover:bg-slate-700" : "border-slate-300 bg-white text-slate-700 hover:bg-slate-100"}`}
+              className={`${baseControlClass} ${themedControlClass}`}
               style={{ fontFamily: "'Barlow Condensed',sans-serif", fontSize: 11 }}
             >
               {lang === "de" ? "🇬🇧 EN" : "🇩🇪 DE"}
             </button>
             <button
               onClick={() => setTheme((cur) => (cur === "dark" ? "light" : "dark"))}
-              className={`cursor-pointer rounded-lg border px-2 py-1 text-xs font-bold transition-colors duration-200 ${isDark ? "border-slate-500/40 bg-slate-800/80 text-white hover:bg-slate-700" : "border-slate-300 bg-white text-slate-700 hover:bg-slate-100"}`}
+              className={`${baseControlClass} ${themedControlClass}`}
               style={{ fontFamily: "'Barlow Condensed',sans-serif", fontSize: 11 }}
             >
               {themeToggleLabel}

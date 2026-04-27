@@ -38,6 +38,12 @@ export default function BracketNode({
   const mode = useModel();
   const probabilities = calcProb(teamA, teamB, mode);
   const showProbabilities = Boolean(teamA && teamB);
+  const articleClass = isFinal
+    ? (theme === "dark" ? "border-emerald-300/60" : "border-amber-300")
+    : (theme === "dark" ? "border-slate-400/25" : "border-slate-200");
+  const headerClass = theme === "dark"
+    ? "border-slate-400/20 bg-[#1d2a44]"
+    : "border-slate-200 bg-slate-50";
 
   const renderRow = (team, label, side) => {
     const isWinner = winner === side;
@@ -79,7 +85,7 @@ export default function BracketNode({
 
   return (
     <article
-      className={`absolute overflow-hidden rounded-xl border shadow-sm backdrop-blur-sm ${isFinal ? (theme === "dark" ? "border-emerald-300/60" : "border-amber-300") : (theme === "dark" ? "border-slate-400/25" : "border-slate-200")}`}
+      className={`absolute overflow-hidden rounded-xl border shadow-sm backdrop-blur-sm ${articleClass}`}
       style={{
         ...style,
         width: CARD_WIDTH,
@@ -92,7 +98,7 @@ export default function BracketNode({
           : (theme === "dark" ? "0 10px 24px rgba(4,10,25,0.28)" : "0 4px 12px rgba(15,23,42,0.12)"),
       }}
     >
-      <header className={`flex h-4 items-center justify-between border-b px-2 ${theme === "dark" ? "border-slate-400/20 bg-[#1d2a44]" : "border-slate-200 bg-slate-50"}`}>
+      <header className={`flex h-4 items-center justify-between border-b px-2 ${headerClass}`}>
         <span className={`text-[9px] font-semibold uppercase tracking-wide ${theme === "dark" ? "text-slate-300" : "text-slate-600"}`}>M{matchId}</span>
         <span className={`truncate text-[9px] ${theme === "dark" ? "text-slate-400" : "text-slate-500"}`}>{venue}</span>
       </header>
