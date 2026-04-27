@@ -2,24 +2,17 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import GroupTable from "./components/GroupTable";
 import ThirdSel from "./components/ThirdSel";
 import { FullBracket } from "./components/Bracket";
-import PathDifficultyTierList from "./components/PathDifficultyTierList";
-import SimulationControlBar from "./components/SimulationControlBar";
-import SimulationResultsTable from "./components/SimulationResultsTable";
 import { FORM, GIDS, INIT_GROUPS, UI_DICT } from "./data/constants";
-import { R32, R16, QF, SF, FIN } from "./data/bracket";
 import {
   clearDown,
   delay,
   solveThirds,
-  getTeam,
   weightedShuffle,
-  pickWinner,
   groupWeight,
   teamStrength,
 } from "./utils/helpers";
 import { ModelContext } from "./utils/model";
 import { POLY_GROUP_WINNER } from "./data/polymarket";
-import { runMonteCarloBracketSimulations } from "./utils/simulationAggregator";
 
 const PROB_MODE = "poly";
 
@@ -261,8 +254,6 @@ export default function App() {
 
   const totalPicks = Object.keys(winners).length;
   const [simulating, setSimulating] = useState(false);
-  const [simulationStats, setSimulationStats] = useState({ totalRuns: 0, aggregate: {} });
-  const [thinkingState, setThinkingState] = useState({ isActive: false, pendingRuns: 0 });
   const [selectedScenario, setSelectedScenario] = useState("");
   const groupsReady = selThirds.length === 8;
   const withViewTransition = useCallback(async (updateFn) => {
@@ -374,102 +365,9 @@ export default function App() {
     [groups, withViewTransition],
   );
 
-  // ── Simulate bracket (weighted random via Polymarket model, round by round) ──
-  const simulateBracketFn = useCallback(async () => {
-    setSimulating(true);
-    setWinners({});
-    await delay(200);
-
-    const curGroups = groups;
-    const curTa = ta;
-    const newW = {};
-    const allMatches = [...R32, ...R16, ...QF, ...SF, FIN];
-
-    for (const match of allMatches) {
-      const teamA = getTeam(match.id, "a", curGroups, curTa, newW);
-      const teamB = getTeam(match.id, "b", curGroups, curTa, newW);
-      if (teamA && teamB) {
-        newW[match.id] = pickWinner(teamA, teamB, PROB_MODE);
-        await delay(60);
-        setWinners({ ...newW });
-      }
-    }
-
-    setSimulating(false);
-  }, [groups, ta]);
-
-  const simulateBracketMultipleFn = useCallback(
-    async (runs) => {
-      if (runs <= 0 || !groupsReady) return;
-
-      const visualDelay = 500 + Math.floor(Math.random() * 1000);
-      setSimulating(true);
-      setThinkingState({ isActive: true, pendingRuns: runs });
-
-      const [result] = await Promise.all([
-        runMonteCarloBracketSimulations({
-          runs,
-          groups,
-          ta,
-          mode: PROB_MODE,
-        }),
-        delay(visualDelay),
-      ]);
-
-      setSimulationStats((prev) => {
-        const nextAggregate = { ...prev.aggregate };
-
-        Object.entries(result.aggregate).forEach(([team, stats]) => {
-          const existing = nextAggregate[team] || {
-            wins: 0,
-            finals: 0,
-            semiFinals: 0,
-            quarterFinals: 0,
-          };
-
-          nextAggregate[team] = {
-            wins: existing.wins + stats.wins,
-            finals: existing.finals + stats.finals,
-            semiFinals: existing.semiFinals + stats.semiFinals,
-            quarterFinals: existing.quarterFinals + stats.quarterFinals,
-          };
-        });
-
-        return {
-          totalRuns: prev.totalRuns + runs,
-          aggregate: nextAggregate,
-        };
-      });
-
-      setThinkingState({ isActive: false, pendingRuns: 0 });
-      setSimulating(false);
-    },
-    [groups, groupsReady, ta],
-  );
-
   const resetBracketFn = useCallback(() => {
     setWinners({});
   }, []);
-
-  const resetSimulationStats = useCallback(() => {
-    setSimulationStats({ totalRuns: 0, aggregate: {} });
-    setThinkingState({ isActive: false, pendingRuns: 0 });
-  }, []);
-
-  const simulationRows = useMemo(() => {
-    const rows = Object.entries(simulationStats.aggregate).map(([team, stats]) => ({
-      team,
-      ...stats,
-    }));
-
-    return rows.sort((a, b) => {
-      if (b.wins !== a.wins) return b.wins - a.wins;
-      if (b.finals !== a.finals) return b.finals - a.finals;
-      if (b.semiFinals !== a.semiFinals) return b.semiFinals - a.semiFinals;
-      if (b.quarterFinals !== a.quarterFinals) return b.quarterFinals - a.quarterFinals;
-      return a.team.localeCompare(b.team);
-    });
-  }, [simulationStats.aggregate]);
 
   // ── URL sync: update address bar on every state change ──
   useEffect(() => {
@@ -607,7 +505,6 @@ export default function App() {
         <div className="flex px-5 gap-1" style={{ borderTop: "1px solid rgba(255,255,255,0.08)", background: "#15253d" }}>
           {tabBtn("groups", t.tabGroups)}
           {tabBtn("bracket", t.tabBracket)}
-          {tabBtn("tierList", t.tabTierList)}
         </div>
       </header>
 
@@ -693,8 +590,6 @@ export default function App() {
               <strong>{t.instructionsLabel}</strong> {t.instructions}
             </div>
           </div>
-        ) : tab === "tierList" ? (
-          <PathDifficultyTierList lang={lang} />
         ) : (
           <div className="p-2 sm:p-4 overflow-x-auto">
             <h2
@@ -704,14 +599,6 @@ export default function App() {
               {t.bracketHeading}
             </h2>
             <div className="mb-2 flex flex-wrap items-center gap-2">
-              <button
-                onClick={simulateBracketFn}
-                disabled={simulating || !groupsReady}
-                className="px-3 py-1.5 rounded text-xs font-bold uppercase tracking-wide text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                style={{ background: simulating || !groupsReady ? "#64748b" : "#059669", fontFamily: "'Barlow Condensed',sans-serif" }}
-              >
-                {simulating ? t.simulating : t.simBracketSingle}
-              </button>
               <button
                 onClick={resetBracketFn}
                 disabled={simulating}
@@ -726,38 +613,8 @@ export default function App() {
                 </span>
               )}
             </div>
-            <SimulationControlBar
-              totalRuns={simulationStats.totalRuns}
-              isThinking={thinkingState.isActive}
-              pendingRuns={thinkingState.pendingRuns}
-              disabled={simulating || !groupsReady}
-              onAddRuns={simulateBracketMultipleFn}
-              onResetStats={resetSimulationStats}
-              labels={{
-                totalSimulationsLabel: t.simTotalRuns,
-                runsSuffix: t.simRunsSuffix,
-                resetStats: t.simResetStats,
-                calculatingLabel: t.simCalculating,
-                processingCounter: t.simProcessingCounter,
-              }}
-            />
             <p className="text-xs text-slate-400 mb-2 mt-3 sm:hidden">{t.swipeHint}</p>
             <FullBracket groups={groups} ta={ta} winners={winners} onPick={handlePick} lang={lang} />
-            <SimulationResultsTable
-              rows={simulationRows}
-              totalRuns={simulationStats.totalRuns}
-              lang={lang}
-              labels={{
-                title: t.simResultsTitle,
-                subtitle: t.simResultsSubtitle,
-                team: t.simResultsTeam,
-                champion: t.simResultsChampion,
-                final: t.simResultsFinal,
-                semiFinal: t.simResultsSemiFinal,
-                quarterFinal: t.simResultsQuarterFinal,
-                emptyState: t.simResultsEmptyState,
-              }}
-            />
           </div>
         )}
       </div>
