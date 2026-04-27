@@ -261,6 +261,7 @@ export function FullBracket({ groups, ta, winners, onPick, lang = "de", theme = 
               </svg>
             </div>
           </div>
+          </div>
         </div>
       </div>
     </div>
