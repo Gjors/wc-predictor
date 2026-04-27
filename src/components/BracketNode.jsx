@@ -44,15 +44,16 @@ export default function BracketNode({
     const isLoser = winner && winner !== side;
     const isKnownTeam = Boolean(team);
     const probability = side === "a" ? probabilities.a : probabilities.b;
+    const hoverClass = isKnownTeam
+      ? (theme === "dark" ? "cursor-pointer hover:bg-[#223250]" : "cursor-pointer hover:bg-slate-50")
+      : "cursor-not-allowed";
 
     return (
       <button
         type="button"
         onClick={() => isKnownTeam && onPick(matchId, side)}
         disabled={!isKnownTeam}
-        className={`flex h-5 w-full items-center gap-2 px-2 text-left transition-colors ${
-          isKnownTeam ? (theme === "dark" ? "cursor-pointer hover:bg-[#223250]" : "cursor-pointer hover:bg-slate-50") : "cursor-not-allowed"
-        } ${isLoser ? "opacity-60" : ""}`}
+        className={`flex h-5 w-full items-center gap-2 px-2 text-left transition-colors ${hoverClass} ${isLoser ? "opacity-60" : ""}`}
         style={{
           background: theme === "dark"
             ? (isWinner ? "linear-gradient(90deg, rgba(40,88,76,0.72), rgba(31,52,84,0.64))" : "rgba(16,29,53,0.5)")

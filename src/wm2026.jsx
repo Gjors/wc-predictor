@@ -198,6 +198,7 @@ export default function App() {
   const [groupPicks, setGroupPicks] = useState(_restored?.groupPicks || {});
   const t = UI_DICT[lang];
   const isDark = theme === "dark";
+  const themeToggleLabel = isDark ? "☀️ Light" : "🌙 Dark";
 
   const ta = useMemo(() => solveThirds(selThirds), [selThirds]);
 
@@ -523,7 +524,7 @@ export default function App() {
               className={`cursor-pointer rounded-lg border px-2 py-1 text-xs font-bold transition-colors duration-200 ${isDark ? "border-slate-500/40 bg-slate-800/80 text-white hover:bg-slate-700" : "border-slate-300 bg-white text-slate-700 hover:bg-slate-100"}`}
               style={{ fontFamily: "'Barlow Condensed',sans-serif", fontSize: 11 }}
             >
-              {isDark ? "☀️ Light" : "🌙 Dark"}
+              {themeToggleLabel}
             </button>
           </div>
         </div>
