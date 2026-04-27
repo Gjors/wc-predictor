@@ -22,7 +22,6 @@ const CARD_WIDTH = 208;
 const COL_GAP = 24;
 const HALF_W = 4 * CARD_WIDTH + 3 * COL_GAP;
 const CONNECTOR = "rgba(94,234,212,0.55)";
-const BRACKET_BASE_HEIGHT = HH + 40;
 
 export function BHalf({ r32ids, r16ids, qfids, sfids, groups, ta, winners, onPick, mirror, lang = "de", theme = "light" }) {
   const allIds = [r32ids, r16ids, qfids, sfids];
@@ -139,6 +138,7 @@ export function FullBracket({ groups, ta, winners, onPick, lang = "de", theme = 
   const rightLabels = [...leftLabels].reverse();
   const fitRef = useRef(null);
   const [scale, setScale] = useState(1);
+  const baseHeight = HH + 40;
 
   useEffect(() => {
     const el = fitRef.current;
@@ -166,8 +166,8 @@ export function FullBracket({ groups, ta, winners, onPick, lang = "de", theme = 
     >
       <Champ groups={groups} ta={ta} winners={winners} lang={lang} theme={theme} />
       <div ref={fitRef} className="overflow-hidden pb-2">
-        <div style={{ width: TOTAL_W * scale, height: BRACKET_BASE_HEIGHT * scale }}>
-          <div style={{ width: TOTAL_W, height: BRACKET_BASE_HEIGHT, transform: `scale(${scale})`, transformOrigin: "top left" }}>
+        <div style={{ width: TOTAL_W * scale, height: baseHeight * scale }}>
+          <div style={{ width: TOTAL_W, height: baseHeight, transform: `scale(${scale})`, transformOrigin: "top left" }}>
           <div className="mb-2 flex items-end" style={{ width: TOTAL_W }}>
             {leftLabels.map((label, i) => (
               <div
