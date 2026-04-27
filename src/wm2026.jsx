@@ -193,9 +193,16 @@ export default function App() {
   const [winners, setWinners] = useState(_restored?.winners || {});
   const [tab, setTab] = useState("groups");
   const [lang, setLang] = useState("de");
+  const [theme, setTheme] = useState("dark");
   const [isDetailMode, setIsDetailMode] = useState(_restored?.isDetailMode || false);
   const [groupPicks, setGroupPicks] = useState(_restored?.groupPicks || {});
   const t = UI_DICT[lang];
+  const isDark = theme === "dark";
+  const themeToggleLabel = isDark ? "☀️ Light" : "🌙 Dark";
+  const baseControlClass = "cursor-pointer rounded-lg border px-2 py-1 text-xs font-bold transition-colors duration-200";
+  const themedControlClass = isDark
+    ? "border-slate-500/40 bg-slate-800/80 text-white hover:bg-slate-700"
+    : "border-slate-300 bg-white text-slate-700 hover:bg-slate-100";
 
   const ta = useMemo(() => solveThirds(selThirds), [selThirds]);
 
@@ -465,15 +472,15 @@ export default function App() {
         <div className="flex items-center px-5 py-1.5">
           <span className="text-xl mr-2">⚽</span>
           <div>
-            <h1 className="text-white font-bold text-base leading-tight" style={{ fontFamily: "'Barlow Condensed',sans-serif", letterSpacing: "0.5px" }}>
+            <h1 className={`${isDark ? "text-white" : "text-slate-900"} font-bold text-base leading-tight`} style={{ fontFamily: "'Barlow Condensed',sans-serif", letterSpacing: "0.5px" }}>
               {t.title}
             </h1>
-            <p className="text-blue-200" style={{ fontSize: 10 }}>
+            <p className={isDark ? "text-blue-200" : "text-slate-500"} style={{ fontSize: 10 }}>
               <span className="hidden sm:inline">{t.subtitle} &nbsp;|&nbsp; {t.dates}</span>
               <span className="sm:hidden text-amber-300 font-bold">{totalPicks}/31 {t.picks}</span>
             </p>
             {countdown ? (
-              <p className="text-blue-300 font-bold" style={{ fontSize: 10, fontFamily: "'Barlow Condensed',sans-serif" }}>
+              <p className={`${isDark ? "text-blue-300" : "text-slate-600"} font-bold`} style={{ fontSize: 10, fontFamily: "'Barlow Condensed',sans-serif" }}>
                 {t.countdownPre}{t.countdownPre ? " " : ""}{countdown.days} {t.countdownDays}, {countdown.hours} {t.countdownHours}, {countdown.minutes} {t.countdownMin}.
               </p>
             ) : (
@@ -483,7 +490,7 @@ export default function App() {
             )}
           </div>
           <div className="ml-auto flex items-center gap-2 sm:gap-3">
-            <div className="hidden md:flex items-center gap-3 text-blue-300" style={{ fontSize: 10 }}>
+            <div className={`hidden md:flex items-center gap-3 ${isDark ? "text-blue-300" : "text-slate-500"}`} style={{ fontSize: 10 }}>
               <span>{t.teams}</span><span>·</span><span>{t.groups}</span><span>·</span>
               <span className="text-amber-300 font-bold">{totalPicks}/31 {t.picks}</span>
             </div>
@@ -510,6 +517,13 @@ export default function App() {
             >
               {lang === "de" ? "🇬🇧 EN" : "🇩🇪 DE"}
             </button>
+            <button
+              onClick={() => setTheme((cur) => (cur === "dark" ? "light" : "dark"))}
+              className={`${baseControlClass} ${themedControlClass}`}
+              style={{ fontFamily: "'Barlow Condensed',sans-serif", fontSize: 11 }}
+            >
+              {themeToggleLabel}
+            </button>
           </div>
         </div>
         <div className="flex gap-1 px-5" style={{ borderTop: "1px solid rgba(255,255,255,0.08)", background: "rgba(11,27,53,0.9)" }}>
@@ -520,10 +534,10 @@ export default function App() {
 
       <div className="flex-1 overflow-auto">
         {tab === "groups" ? (
-          <div className="p-4" style={{ background: "#f7f9fb" }}>
+          <div className="p-4" style={{ background: isDark ? "transparent" : "#f7f9fb" }}>
             <h2
               className="font-bold text-xs uppercase tracking-wider mb-3 pb-1"
-              style={{ color: "#1a2d4a", borderBottom: "2px solid #1a2d4a", fontFamily: "'Barlow Condensed',sans-serif" }}
+              style={{ color: isDark ? "#dbeafe" : "#1a2d4a", borderBottom: `2px solid ${isDark ? "rgba(148,163,184,0.4)" : "#1a2d4a"}`, fontFamily: "'Barlow Condensed',sans-serif" }}
             >
               {t.groupHeading} — <span className="hidden sm:inline">{t.sortDragDrop}</span><span className="sm:hidden">{t.sortLongPress}</span> {t.sortSuffix}
             </h2>
@@ -585,6 +599,7 @@ export default function App() {
                   groupPicks={groupPicks}
                   onPickMatch={handlePickMatch}
                   groupMatches={GROUP_MATCHES}
+                  theme={theme}
                 />
               ))}
             </div>
@@ -595,8 +610,9 @@ export default function App() {
               onAutoFill={handleAutoThirds}
               onClear={handleClearThirds}
               lang={lang}
+              theme={theme}
             />
-            <div className="p-3 rounded bg-white border text-slate-500 mt-3" style={{ borderColor: "#d1d9e0", fontSize: 11 }}>
+            <div className={`mt-3 rounded border p-3 ${isDark ? "border-slate-600/60 bg-[#0f223f]/80 text-slate-300" : "bg-white text-slate-500"}`} style={{ borderColor: isDark ? "rgba(148,163,184,0.4)" : "#d1d9e0", fontSize: 11 }}>
               <strong>{t.instructionsLabel}</strong> {t.instructions}
             </div>
           </div>

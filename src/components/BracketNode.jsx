@@ -33,16 +33,26 @@ export default function BracketNode({
   style,
   isFinal,
   lang = "de",
+  theme = "light",
 }) {
   const mode = useModel();
   const probabilities = calcProb(teamA, teamB, mode);
   const showProbabilities = Boolean(teamA && teamB);
+  const articleClass = isFinal
+    ? (theme === "dark" ? "border-emerald-300/60" : "border-amber-300")
+    : (theme === "dark" ? "border-slate-400/25" : "border-slate-200");
+  const headerClass = theme === "dark"
+    ? "border-slate-400/20 bg-[#1d2a44]"
+    : "border-slate-200 bg-slate-50";
 
   const renderRow = (team, label, side) => {
     const isWinner = winner === side;
     const isLoser = winner && winner !== side;
     const isKnownTeam = Boolean(team);
     const probability = side === "a" ? probabilities.a : probabilities.b;
+    const hoverClass = isKnownTeam
+      ? (theme === "dark" ? "cursor-pointer hover:bg-[#223250]" : "cursor-pointer hover:bg-slate-50")
+      : "cursor-not-allowed";
 
     return (
       <button

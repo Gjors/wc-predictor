@@ -1,3 +1,4 @@
+import { useEffect, useRef, useState } from "react";
 import { ISO_CODES, UI_DICT } from "../data/constants";
 import {
   CC,
@@ -22,7 +23,7 @@ const COL_GAP = 24;
 const HALF_W = 4 * CARD_WIDTH + 3 * COL_GAP;
 const CONNECTOR = "rgba(94,234,212,0.55)";
 
-export function BHalf({ r32ids, r16ids, qfids, sfids, groups, ta, winners, onPick, mirror, lang = "de" }) {
+export function BHalf({ r32ids, r16ids, qfids, sfids, groups, ta, winners, onPick, mirror, lang = "de", theme = "light" }) {
   const allIds = [r32ids, r16ids, qfids, sfids];
   const colX = (lvl) => {
     const idx = mirror ? 3 - lvl : lvl;
@@ -80,6 +81,7 @@ export function BHalf({ r32ids, r16ids, qfids, sfids, groups, ta, winners, onPic
               onPick={onPick}
               style={{ left: x, top: centers[mi] - MATCH_HEIGHT / 2 }}
               lang={lang}
+              theme={theme}
             />
           );
         });
@@ -88,7 +90,7 @@ export function BHalf({ r32ids, r16ids, qfids, sfids, groups, ta, winners, onPic
   );
 }
 
-export function Champ({ groups, ta, winners, lang = "de" }) {
+export function Champ({ groups, ta, winners, lang = "de", theme = "light" }) {
   const ws = winners[104];
   const champ = ws ? getTeam(104, ws, groups, ta, winners) : null;
   if (!champ) return null;
@@ -115,7 +117,7 @@ export function Champ({ groups, ta, winners, lang = "de" }) {
   );
 }
 
-export function FullBracket({ groups, ta, winners, onPick, lang = "de" }) {
+export function FullBracket({ groups, ta, winners, onPick, lang = "de", theme = "light" }) {
   const t = UI_DICT[lang];
   const GAP = 42;
   const FINAL_WIDTH = CARD_WIDTH + 20;
@@ -134,6 +136,23 @@ export function FullBracket({ groups, ta, winners, onPick, lang = "de" }) {
 
   const leftLabels = [t.roundR32, t.roundR16, t.roundQF, t.roundSF];
   const rightLabels = [...leftLabels].reverse();
+  const fitRef = useRef(null);
+  const [scale, setScale] = useState(1);
+  const baseHeight = HH + 40;
+
+  useEffect(() => {
+    const el = fitRef.current;
+    if (!el) return undefined;
+    const updateScale = () => {
+      const width = el.clientWidth;
+      if (!width) return;
+      setScale(Math.min(1, Math.max(0.5, (width - 8) / TOTAL_W)));
+    };
+    updateScale();
+    const observer = new ResizeObserver(updateScale);
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [TOTAL_W]);
 
   return (
     <div
@@ -186,6 +205,7 @@ export function FullBracket({ groups, ta, winners, onPick, lang = "de" }) {
                 onPick={onPick}
                 mirror={false}
                 lang={lang}
+                theme={theme}
               />
             </div>
 
@@ -201,6 +221,7 @@ export function FullBracket({ groups, ta, winners, onPick, lang = "de" }) {
                 onPick={onPick}
                 mirror
                 lang={lang}
+                theme={theme}
               />
             </div>
 
@@ -216,6 +237,7 @@ export function FullBracket({ groups, ta, winners, onPick, lang = "de" }) {
               style={{ left: finX, top: finY }}
               isFinal
               lang={lang}
+              theme={theme}
             />
 
             <svg className="pointer-events-none absolute inset-0" width={TOTAL_W} height={HH + 8}>
@@ -227,6 +249,7 @@ export function FullBracket({ groups, ta, winners, onPick, lang = "de" }) {
               <line x1={rMid} y1={sfCY} x2={rMid} y2={finCY} stroke={CONNECTOR} strokeWidth="1" />
               <line x1={rMid} y1={finCY} x2={finX + FINAL_WIDTH} y2={finCY} stroke={CONNECTOR} strokeWidth="1" />
             </svg>
+          </div>
           </div>
         </div>
       </div>
