@@ -20,7 +20,7 @@ const MATCH_HEIGHT = 56;
 const CARD_WIDTH = 208;
 const COL_GAP = 24;
 const HALF_W = 4 * CARD_WIDTH + 3 * COL_GAP;
-const CONNECTOR = "#cbd5e1";
+const CONNECTOR = "rgba(94,234,212,0.55)";
 
 export function BHalf({ r32ids, r16ids, qfids, sfids, groups, ta, winners, onPick, mirror, lang = "de" }) {
   const allIds = [r32ids, r16ids, qfids, sfids];
@@ -95,7 +95,7 @@ export function Champ({ groups, ta, winners, lang = "de" }) {
   const t = UI_DICT[lang];
 
   return (
-    <div className="mb-4 flex items-center justify-center gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3">
+    <div className="mb-4 flex items-center justify-center gap-3 rounded-2xl border border-emerald-400/35 bg-[#132540]/85 px-4 py-3">
       {ISO_CODES[champ] ? (
         <img
           src={`https://flagcdn.com/w40/${ISO_CODES[champ]}.png`}
@@ -107,8 +107,8 @@ export function Champ({ groups, ta, winners, lang = "de" }) {
         <span className="inline-block h-6 w-10 rounded bg-slate-300" aria-label={`${champ} flag missing`} />
       )}
       <div className="text-center">
-        <div className="text-[10px] font-semibold uppercase tracking-[0.12em] text-amber-700">{t.champion}</div>
-        <div className="text-lg font-bold text-slate-900">{sn(champ, lang)}</div>
+        <div className="text-[10px] font-semibold uppercase tracking-[0.12em] text-emerald-300">{t.champion}</div>
+        <div className="text-lg font-bold text-slate-100">{sn(champ, lang)}</div>
       </div>
       <span className="text-xl">🏆</span>
     </div>
@@ -136,7 +136,13 @@ export function FullBracket({ groups, ta, winners, onPick, lang = "de" }) {
   const rightLabels = [...leftLabels].reverse();
 
   return (
-    <div className="rounded-2xl border border-slate-200 bg-slate-50 p-3 shadow-sm sm:p-4">
+    <div
+      className="rounded-2xl border p-3 shadow-sm sm:p-4"
+      style={{
+        borderColor: "rgba(148,163,184,0.25)",
+        background: "radial-gradient(circle at 45% 20%, rgba(26,70,128,0.28), rgba(8,18,39,0.96) 55%)",
+      }}
+    >
       <Champ groups={groups} ta={ta} winners={winners} lang={lang} />
       <div className="overflow-x-auto pb-2">
         <div className="min-w-max">
@@ -144,14 +150,14 @@ export function FullBracket({ groups, ta, winners, onPick, lang = "de" }) {
             {leftLabels.map((label, i) => (
               <div
                 key={`l${i}`}
-                className="flex-shrink-0 border-b border-slate-300 pb-1 text-center text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-600"
+                className="flex-shrink-0 border-b border-slate-400/30 pb-1 text-center text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-300"
                 style={{ width: CARD_WIDTH, marginLeft: i ? COL_GAP : 0 }}
               >
                 {label}
               </div>
             ))}
             <div
-              className="flex-shrink-0 border-b border-amber-300 pb-1 text-center text-[10px] font-semibold uppercase tracking-[0.08em] text-amber-700"
+              className="flex-shrink-0 border-b border-emerald-400/60 pb-1 text-center text-[10px] font-semibold uppercase tracking-[0.08em] text-emerald-300"
               style={{ width: FINAL_WIDTH, marginLeft: GAP, marginRight: GAP }}
             >
               {t.final}
@@ -159,7 +165,7 @@ export function FullBracket({ groups, ta, winners, onPick, lang = "de" }) {
             {rightLabels.map((label, i) => (
               <div
                 key={`r${i}`}
-                className="flex-shrink-0 border-b border-slate-300 pb-1 text-center text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-600"
+                className="flex-shrink-0 border-b border-slate-400/30 pb-1 text-center text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-300"
                 style={{ width: CARD_WIDTH, marginLeft: i ? COL_GAP : 0 }}
               >
                 {label}

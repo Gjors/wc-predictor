@@ -438,9 +438,13 @@ export default function App() {
   const tabBtn = (id, label) => (
     <button
       onClick={() => setTab(id)}
-      className={`px-3 sm:px-5 py-2 text-xs font-bold uppercase tracking-wider transition-colors duration-200 cursor-pointer
-        ${tab === id ? "text-[#1a2d4a] bg-[#eef1f5] rounded-t" : "text-blue-300 hover:text-white"}`}
-      style={{ fontFamily: "'Barlow Condensed',sans-serif", borderBottom: tab === id ? "none" : "2px solid transparent" }}
+      className={`cursor-pointer rounded-t-lg px-3 py-2 text-xs font-bold uppercase tracking-wider transition-colors duration-200 sm:px-5
+        ${tab === id ? "bg-[#0f2a4f] text-emerald-300" : "text-blue-200 hover:text-white"}`}
+      style={{
+        fontFamily: "'Barlow Condensed',sans-serif",
+        border: tab === id ? "1px solid rgba(52,211,153,0.45)" : "1px solid transparent",
+        borderBottom: tab === id ? "none" : "1px solid transparent",
+      }}
     >
       {label}
     </button>
@@ -448,10 +452,16 @@ export default function App() {
 
   return (
     <ModelContext.Provider value={PROB_MODE}>
-    <div className="flex flex-col h-screen" style={{ background: "#eef1f5", fontFamily: "'Barlow','Barlow Condensed',system-ui,sans-serif" }}>
+    <div
+      className="flex h-screen flex-col"
+      style={{
+        background: "radial-gradient(circle at 22% 4%, #153a70 0%, #08142b 48%, #050d1f 100%)",
+        fontFamily: "'Barlow','Barlow Condensed',system-ui,sans-serif",
+      }}
+    >
       <link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&family=Barlow+Condensed:wght@500;600;700&display=swap" rel="stylesheet" />
 
-      <header className="sticky top-0 z-50 flex-shrink-0 shadow-sm" style={{ background: "#1a2d4a" }}>
+      <header className="sticky top-0 z-50 flex-shrink-0 border-b border-slate-400/25 bg-[#081a34]/95 shadow-sm backdrop-blur-sm">
         <div className="flex items-center px-5 py-1.5">
           <span className="text-xl mr-2">⚽</span>
           <div>
@@ -479,7 +489,7 @@ export default function App() {
             </div>
             <button
               onClick={handleShare}
-              className="relative px-2.5 py-1 rounded text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 transition-colors duration-200 cursor-pointer"
+              className="relative cursor-pointer rounded-lg bg-blue-600 px-2.5 py-1 text-xs font-bold text-white transition-colors duration-200 hover:bg-blue-500"
               style={{ fontFamily: "'Barlow Condensed',sans-serif", fontSize: 11 }}
             >
               {copied ? t.copied : t.share}
@@ -495,14 +505,14 @@ export default function App() {
             {/* Language toggle */}
             <button
               onClick={() => setLang((l) => (l === "de" ? "en" : "de"))}
-              className="px-2 py-1 rounded text-xs font-bold text-white bg-slate-700 hover:bg-slate-600 transition-colors duration-200 cursor-pointer"
+              className="cursor-pointer rounded-lg border border-slate-500/40 bg-slate-800/80 px-2 py-1 text-xs font-bold text-white transition-colors duration-200 hover:bg-slate-700"
               style={{ fontFamily: "'Barlow Condensed',sans-serif", fontSize: 11 }}
             >
               {lang === "de" ? "🇬🇧 EN" : "🇩🇪 DE"}
             </button>
           </div>
         </div>
-        <div className="flex px-5 gap-1" style={{ borderTop: "1px solid rgba(255,255,255,0.08)", background: "#15253d" }}>
+        <div className="flex gap-1 px-5" style={{ borderTop: "1px solid rgba(255,255,255,0.08)", background: "rgba(11,27,53,0.9)" }}>
           {tabBtn("groups", t.tabGroups)}
           {tabBtn("bracket", t.tabBracket)}
         </div>
@@ -591,10 +601,10 @@ export default function App() {
             </div>
           </div>
         ) : (
-          <div className="p-2 sm:p-4 overflow-x-auto">
+          <div className="overflow-x-auto p-2 sm:p-4">
             <h2
               className="font-bold text-xs uppercase tracking-wider mb-2 pb-1"
-              style={{ color: "#1a2d4a", borderBottom: "2px solid #1a2d4a", fontFamily: "'Barlow Condensed',sans-serif" }}
+              style={{ color: "#dbeafe", borderBottom: "2px solid rgba(148,163,184,0.4)", fontFamily: "'Barlow Condensed',sans-serif" }}
             >
               {t.bracketHeading}
             </h2>
@@ -602,18 +612,18 @@ export default function App() {
               <button
                 onClick={resetBracketFn}
                 disabled={simulating}
-                className="px-3 py-1.5 rounded text-xs font-bold uppercase tracking-wide text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                style={{ background: "#64748b", fontFamily: "'Barlow Condensed',sans-serif" }}
+                className="rounded-lg border border-slate-500/35 bg-slate-700/80 px-3 py-1.5 text-xs font-bold uppercase tracking-wide text-white transition-colors hover:bg-slate-600 disabled:cursor-not-allowed disabled:opacity-50"
+                style={{ fontFamily: "'Barlow Condensed',sans-serif" }}
               >
                 {t.resetBracket}
               </button>
               {!groupsReady && (
-                <span className="text-amber-600" style={{ fontSize: 10 }}>
+                <span className="text-amber-300" style={{ fontSize: 10 }}>
                   {t.bracketDisabled}
                 </span>
               )}
             </div>
-            <p className="text-xs text-slate-400 mb-2 mt-3 sm:hidden">{t.swipeHint}</p>
+            <p className="mb-2 mt-3 text-xs text-slate-400 sm:hidden">{t.swipeHint}</p>
             <FullBracket groups={groups} ta={ta} winners={winners} onPick={handlePick} lang={lang} />
           </div>
         )}
