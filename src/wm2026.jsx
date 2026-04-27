@@ -446,10 +446,14 @@ export default function App() {
     <button
       onClick={() => setTab(id)}
       className={`cursor-pointer rounded-t-lg px-3 py-2 text-xs font-bold uppercase tracking-wider transition-colors duration-200 sm:px-5
-        ${tab === id ? "bg-[#0f2a4f] text-emerald-300" : "text-blue-200 hover:text-white"}`}
+        ${tab === id
+          ? (isDark ? "bg-[#0f2a4f] text-emerald-300" : "bg-white text-[#1a2d4a]")
+          : (isDark ? "text-blue-200 hover:text-white" : "text-slate-500 hover:text-slate-900")}`}
       style={{
         fontFamily: "'Barlow Condensed',sans-serif",
-        border: tab === id ? "1px solid rgba(52,211,153,0.45)" : "1px solid transparent",
+        border: tab === id
+          ? `1px solid ${isDark ? "rgba(52,211,153,0.45)" : "rgba(30,41,59,0.16)"}`
+          : "1px solid transparent",
         borderBottom: tab === id ? "none" : "1px solid transparent",
       }}
     >
@@ -462,13 +466,15 @@ export default function App() {
     <div
       className="flex h-screen flex-col"
       style={{
-        background: "radial-gradient(circle at 22% 4%, #153a70 0%, #08142b 48%, #050d1f 100%)",
+        background: isDark
+          ? "radial-gradient(circle at 22% 4%, #153a70 0%, #08142b 48%, #050d1f 100%)"
+          : "radial-gradient(circle at 30% -10%, #e7f1ff 0%, #f8fafc 50%, #eef2f7 100%)",
         fontFamily: "'Barlow','Barlow Condensed',system-ui,sans-serif",
       }}
     >
       <link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&family=Barlow+Condensed:wght@500;600;700&display=swap" rel="stylesheet" />
 
-      <header className="sticky top-0 z-50 flex-shrink-0 border-b border-slate-400/25 bg-[#081a34]/95 shadow-sm backdrop-blur-sm">
+      <header className={`sticky top-0 z-50 flex-shrink-0 border-b shadow-sm backdrop-blur-sm ${isDark ? "border-slate-400/25 bg-[#081a34]/95" : "border-slate-200 bg-white/95"}`}>
         <div className="flex items-center px-5 py-1.5">
           <span className="text-xl mr-2">⚽</span>
           <div>
@@ -512,7 +518,7 @@ export default function App() {
             {/* Language toggle */}
             <button
               onClick={() => setLang((l) => (l === "de" ? "en" : "de"))}
-              className="cursor-pointer rounded-lg border border-slate-500/40 bg-slate-800/80 px-2 py-1 text-xs font-bold text-white transition-colors duration-200 hover:bg-slate-700"
+              className={`${baseControlClass} ${themedControlClass}`}
               style={{ fontFamily: "'Barlow Condensed',sans-serif", fontSize: 11 }}
             >
               {lang === "de" ? "🇬🇧 EN" : "🇩🇪 DE"}
@@ -526,7 +532,7 @@ export default function App() {
             </button>
           </div>
         </div>
-        <div className="flex gap-1 px-5" style={{ borderTop: "1px solid rgba(255,255,255,0.08)", background: "rgba(11,27,53,0.9)" }}>
+        <div className="flex gap-1 px-5" style={{ borderTop: isDark ? "1px solid rgba(255,255,255,0.08)" : "1px solid rgba(15,23,42,0.08)", background: isDark ? "rgba(11,27,53,0.9)" : "rgba(248,250,252,0.95)" }}>
           {tabBtn("groups", t.tabGroups)}
           {tabBtn("bracket", t.tabBracket)}
         </div>
@@ -620,7 +626,7 @@ export default function App() {
           <div className="overflow-x-auto p-2 sm:p-4">
             <h2
               className="font-bold text-xs uppercase tracking-wider mb-2 pb-1"
-              style={{ color: "#dbeafe", borderBottom: "2px solid rgba(148,163,184,0.4)", fontFamily: "'Barlow Condensed',sans-serif" }}
+              style={{ color: isDark ? "#dbeafe" : "#1a2d4a", borderBottom: `2px solid ${isDark ? "rgba(148,163,184,0.4)" : "#1a2d4a"}`, fontFamily: "'Barlow Condensed',sans-serif" }}
             >
               {t.bracketHeading}
             </h2>
@@ -639,8 +645,8 @@ export default function App() {
                 </span>
               )}
             </div>
-            <p className="mb-2 mt-3 text-xs text-slate-400 sm:hidden">{t.swipeHint}</p>
-            <FullBracket groups={groups} ta={ta} winners={winners} onPick={handlePick} lang={lang} />
+            <p className={`mb-2 mt-3 text-xs sm:hidden ${isDark ? "text-slate-400" : "text-slate-500"}`}>{t.swipeHint}</p>
+            <FullBracket groups={groups} ta={ta} winners={winners} onPick={handlePick} lang={lang} theme={theme} />
           </div>
         )}
       </div>
